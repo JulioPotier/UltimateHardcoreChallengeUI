@@ -1,0 +1,8 @@
+## Interface: 11508
+## Title: UltimateHardcoreChallengeUI
+## Notes: Ultimate Hardcore Challenge UI
+## Author: UHCC
+## Version: 0.1.0
+## SavedVariables: UHCC_DB
+
+UltimateHardcoreChallengeUI.lua
