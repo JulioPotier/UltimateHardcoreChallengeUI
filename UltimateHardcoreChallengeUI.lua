@@ -2392,6 +2392,18 @@ local function addCheckboxAt(parent, x, y, label, opts)
   return cb
 end
 
+-- Gold/silver texture tokens, or "g"/"s" when colorblind mode UI is enabled.
+local function uhccMoneyDisplayTokens()
+  local colorblindOn = false
+  if GetCVar then
+    local v = GetCVar("colorblindMode")
+    colorblindOn = (v == "1" or v == 1 or v == true)
+  end
+  local goldIcon = colorblindOn and "g" or "|TInterface\\MoneyFrame\\UI-GoldIcon:14:14:0:0|t"
+  local silverIcon = colorblindOn and "s" or "|TInterface\\MoneyFrame\\UI-SilverIcon:14:14:0:0|t"
+  return goldIcon, silverIcon
+end
+
 local function formatCostSilver(costSilver)
   costSilver = tonumber(costSilver) or 0
   if costSilver <= 0 then
@@ -2400,8 +2412,7 @@ local function formatCostSilver(costSilver)
 
   local gold = math.floor(costSilver / 100)
   local silver = math.floor(costSilver % 100)
-  local goldIcon = "|TInterface\\MoneyFrame\\UI-GoldIcon:14:14:0:0|t"
-  local silverIcon = "|TInterface\\MoneyFrame\\UI-SilverIcon:14:14:0:0|t"
+  local goldIcon, silverIcon = uhccMoneyDisplayTokens()
 
   if gold > 0 and silver > 0 then
     return (" - %d %s %d %s"):format(gold, goldIcon, silver, silverIcon)
@@ -2948,6 +2959,15 @@ local function createMainWindow()
         label = "Reset",
         action = "reset_character",
       }
+      spec[#spec + 1] = { kind = "spacer" }
+      spec[#spec + 1] = {
+        kind = "settings_info",
+        text = "Support: https://github.com/JulioPotier/UltimateHardcoreChallengeUI/issues",
+      }
+      spec[#spec + 1] = {
+        kind = "settings_info",
+        text = "Tip me golds on |cffff69b4Kirbybank-Soulseeker|r ;)",
+      }
       return spec
     end
 
@@ -3124,8 +3144,7 @@ local function createMainWindow()
   spent:SetSize(220, 20)
   f.spentFrame = spent
 
-  local goldIcon = "|TInterface\\MoneyFrame\\UI-GoldIcon:14:14:0:0|t"
-  local silverIcon = "|TInterface\\MoneyFrame\\UI-SilverIcon:14:14:0:0|t"
+  local goldIcon, silverIcon = uhccMoneyDisplayTokens()
 
   local spentLabel = spent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   spentLabel:SetPoint("RIGHT", spent, "RIGHT", 0, 0)
@@ -3140,6 +3159,7 @@ local function createMainWindow()
 
   function f:SetSpentCopper(copper)
     local g, s = formatGoldSilverFromCopper(copper)
+    goldIcon, silverIcon = uhccMoneyDisplayTokens()
     spentValue:SetText(("%02d %s %02d %s"):format(g, goldIcon, s, silverIcon))
   end
   recalcSpentDisplay()
