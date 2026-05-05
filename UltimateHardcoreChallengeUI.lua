@@ -1865,6 +1865,28 @@ local function uhccInstallBagHighlightHooks()
     uhccUpdateBagButtonHighlight(button)
   end)
 
+  -- Cursor → bag slot (equipment bar): often no immediate PLAYER_EQUIPMENT_CHANGED sync with GetInventoryItemLink.
+  if not UHCC._bagPutItemInBagHooked then
+    UHCC._bagPutItemInBagHooked = true
+    if type(_G.PutItemInBag) == "function" then
+      hooksecurefunc("PutItemInBag", function()
+        if C_Timer and C_Timer.After then
+          C_Timer.After(0, function()
+            uhccUpdateBagSlotButtons()
+            uhccUpdateEquipViolationOverlay()
+          end)
+          C_Timer.After(0.1, function()
+            uhccUpdateBagSlotButtons()
+            uhccUpdateEquipViolationOverlay()
+          end)
+        else
+          uhccUpdateBagSlotButtons()
+          uhccUpdateEquipViolationOverlay()
+        end
+      end)
+    end
+  end
+
   -- Replace the default Blizzard tooltip handlers for bag item buttons.
   -- (Buttons get their scripts re-assigned by Blizzard; overriding the global handlers is reliable.)
   if type(_G.ContainerFrameItemButton_OnEnter) == "function" and not UHCC._origContainerFrameItemButton_OnEnter then
@@ -2000,6 +2022,24 @@ local function uhccEnsureBagHighlightHooksInstalled()
     end
   end
   tick()
+end
+
+-- Defined after uhccEnsureBagHighlightHooksInstalled (Lua local scope); bag events omit PLAYER_EQUIPMENT_CHANGED briefly.
+local function uhccScheduleBagInventoryViolationRefresh()
+  uhccEnsureBagHighlightHooksInstalled()
+  uhccRefreshAllBagHighlights()
+  uhccUpdateBagSlotButtons()
+  uhccUpdateEquipViolationOverlay()
+  if C_Timer and C_Timer.After then
+    C_Timer.After(0, function()
+      uhccUpdateBagSlotButtons()
+      uhccUpdateEquipViolationOverlay()
+    end)
+    C_Timer.After(0.1, function()
+      uhccUpdateBagSlotButtons()
+      uhccUpdateEquipViolationOverlay()
+    end)
+  end
 end
 
 local function uhccStartBagHighlightTicker()
@@ -3455,8 +3495,7 @@ events:SetScript("OnEvent", function(self, event, name)
   elseif event == "PLAYER_LEVEL_UP" then
     uhccApplyLevelLocks()
   elseif event == "BAG_UPDATE_DELAYED" then
-    uhccEnsureBagHighlightHooksInstalled()
-    uhccRefreshAllBagHighlights()
+    uhccScheduleBagInventoryViolationRefresh()
   elseif event == "GET_ITEM_INFO_RECEIVED" then
     uhccEnsureBagHighlightHooksInstalled()
     uhccRefreshAllBagHighlights()
@@ -3465,9 +3504,15 @@ events:SetScript("OnEvent", function(self, event, name)
     uhccUpdateEquipViolationOverlay()
     uhccUpdateBagSlotButtons()
   elseif event == "UNIT_INVENTORY_CHANGED" then
-    if name == "player" then
+    if name == nil or name == "" or name == "player" then
       uhccUpdateEquipViolationOverlay()
       uhccUpdateBagSlotButtons()
+      if C_Timer and C_Timer.After then
+        C_Timer.After(0, function()
+          uhccUpdateBagSlotButtons()
+          uhccUpdateEquipViolationOverlay()
+        end)
+      end
     end
   elseif event == "UNIT_AURA" then
     if name == "player" then
