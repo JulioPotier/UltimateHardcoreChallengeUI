@@ -1,0 +1,3 @@
+<Bindings>
+  <Binding name="UHCC_TOGGLE_MAINFRAME">UHCC_ToggleMainFrame()</Binding>
+</Bindings>
