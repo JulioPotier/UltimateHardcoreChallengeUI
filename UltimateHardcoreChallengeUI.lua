@@ -294,6 +294,8 @@ UHCC.OPTIONS = (function()
     { checkboxId = "SERVICE-BANK", label = "Bank", cost = 2000, category = "services", term = "bank", tab = "weapons_services", inputType = "checkbox" },
     { checkboxId = "SERVICE-FLIGHTPATHS", label = "Flight Paths", cost = 500, category = "services", term = "flight_paths", tab = "weapons_services", inputType = "checkbox" },
     { checkboxId = "SERVICE-WORLDBUFFS", label = "World Buffs", cost = 1000, category = "services", term = "world_buffs", tab = "weapons_services", inputType = "checkbox" },
+    { checkboxId = "SERVICE-WARLOCKSUMMON", label = "Warlock Summon", cost = 500, category = "services", term = "warlock_summon", tab = "weapons_services", inputType = "checkbox" },
+    { checkboxId = "SERVICE-MAGEPORTAL", label = "Mage Portal", cost = 500, category = "services", term = "mage_portal", tab = "weapons_services", inputType = "checkbox" },
 
     -- Professions & Talents
     {
