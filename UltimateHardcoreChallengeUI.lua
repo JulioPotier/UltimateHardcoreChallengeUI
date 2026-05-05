@@ -292,6 +292,8 @@ UHCC.OPTIONS = (function()
     { checkboxId = "SERVICE-TRADING", label = "Trading", cost = 500, category = "services", term = "trading", tab = "weapons_services", inputType = "checkbox" },
     { checkboxId = "SERVICE-MAIL", label = "Mail", cost = 1000, category = "services", term = "mail", tab = "weapons_services", inputType = "checkbox" },
     { checkboxId = "SERVICE-BANK", label = "Bank", cost = 2000, category = "services", term = "bank", tab = "weapons_services", inputType = "checkbox" },
+    { checkboxId = "SERVICE-FLIGHTPATHS", label = "Flight Paths", cost = 500, category = "services", term = "flight_paths", tab = "weapons_services", inputType = "checkbox" },
+    { checkboxId = "SERVICE-WORLDBUFFS", label = "World Buffs", cost = 1000, category = "services", term = "world_buffs", tab = "weapons_services", inputType = "checkbox" },
 
     -- Professions & Talents
     {
@@ -676,6 +678,22 @@ local function uhccPlayerIsSelfFound()
     end
   end
   return false
+end
+
+local function uhccGetActiveForbiddenWorldBuffName()
+  if not UnitAura then return nil end
+  for i = 1, 80 do
+    local name = UnitAura("player", i, "HELPFUL")
+    if not name then break end
+    if
+      name == "Rallying Cry of the Dragonslayer"
+      or name == "Spirit of Zandalar"
+      or name == "Warchief's Blessing"
+    then
+      return name
+    end
+  end
+  return nil
 end
 
 local function uhccOptionDeniedInSelfFound(opt)
@@ -1610,6 +1628,21 @@ local function uhccComputeEquippedViolations()
     else
       msgs[#msgs + 1] = "You should not use the mailbox yet. Buy Mail first."
       keyParts[#keyParts + 1] = "MAILOPEN:" .. rlow
+    end
+  end
+
+  -- Flight paths restriction: warn while the taxi map is open without purchase.
+  if uhccAnnoyEnabled() and uhccTaxiMapOpen and (not uhccIsPurchasedById("SERVICE-FLIGHTPATHS")) then
+    msgs[#msgs + 1] = "You should not use flight paths yet. Buy Flight Paths first."
+    keyParts[#keyParts + 1] = "TAXIOPEN"
+  end
+
+  -- World buffs restriction: warn if player has a world buff without purchase.
+  if uhccAnnoyEnabled() and (not uhccIsPurchasedById("SERVICE-WORLDBUFFS")) then
+    local wb = uhccGetActiveForbiddenWorldBuffName()
+    if wb then
+      msgs[#msgs + 1] = ("You should not have %s yet. Buy World Buffs first."):format(wb)
+      keyParts[#keyParts + 1] = "WORLDBUFF:" .. wb
     end
   end
 
@@ -3345,6 +3378,7 @@ events:RegisterEvent("BAG_UPDATE_DELAYED")
 events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 events:RegisterEvent("UNIT_INVENTORY_CHANGED")
+events:RegisterEvent("UNIT_AURA")
 events:RegisterEvent("TRAINER_SHOW")
 events:RegisterEvent("TRAINER_CLOSED")
 events:RegisterEvent("TRAINER_UPDATE")
@@ -3364,6 +3398,8 @@ events:RegisterEvent("TRADE_CLOSED")
 events:RegisterEvent("SKILL_LINES_CHANGED")
 events:RegisterEvent("MAIL_SHOW")
 events:RegisterEvent("MAIL_CLOSED")
+events:RegisterEvent("TAXIMAP_OPENED")
+events:RegisterEvent("TAXIMAP_CLOSED")
 events:SetScript("OnEvent", function(self, event, name)
   if event == "ADDON_LOADED" and name == ADDON_NAME then
     ensureDB()
@@ -3410,6 +3446,10 @@ events:SetScript("OnEvent", function(self, event, name)
     if name == "player" then
       uhccUpdateEquipViolationOverlay()
       uhccUpdateBagSlotButtons()
+    end
+  elseif event == "UNIT_AURA" then
+    if name == "player" then
+      uhccUpdateEquipViolationOverlay()
     end
   elseif event == "BANKFRAME_OPENED" then
     uhccBankFrameOpen = true
@@ -3470,6 +3510,12 @@ events:SetScript("OnEvent", function(self, event, name)
     end
   elseif event == "MAIL_CLOSED" then
     uhccMailboxOpen = false
+    uhccUpdateEquipViolationOverlay()
+  elseif event == "TAXIMAP_OPENED" then
+    uhccTaxiMapOpen = true
+    uhccUpdateEquipViolationOverlay()
+  elseif event == "TAXIMAP_CLOSED" then
+    uhccTaxiMapOpen = false
     uhccUpdateEquipViolationOverlay()
   elseif event == "TRAINER_SHOW" or event == "TRAINER_UPDATE" then
     if not uhccAnnoyEnabled() then return end
