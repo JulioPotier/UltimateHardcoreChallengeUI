@@ -4,5 +4,6 @@
 ## Author: UHCC
 ## Version: 0.1.0
 ## SavedVariables: UHCC_DB
+## SavedVariablesPerCharacter: UHCC_CharDB
 
 UltimateHardcoreChallengeUI.lua

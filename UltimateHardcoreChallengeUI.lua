@@ -10,12 +10,68 @@ local DEFAULTS = {
   },
 }
 
+-- Content horizontal insets 12+12; options scroll frame edges 10+30 → inner width for 3 columns.
+local MAIN_FRAME_WIDTH, MAIN_FRAME_HEIGHT = 900, 500
+
 UHCC.TABS = {
   { tab = "gear_quality", label = "Gear & Quality" },
   { tab = "weapons_services", label = "Weapons & Services" },
   { tab = "professions_talents", label = "Professions & Talents" },
   { tab = "zones_dungeons", label = "Zones & Dungeons" },
   { tab = "settings", label = "Settings" },
+}
+
+-- Classic Era world areas: { mapID, displayName, csvType, continent } (from wow-zones.csv).
+UHCC.WORLD_ZONES = {
+  { 1411, "Durotar", "zone", "Kalimdor" },
+  { 1412, "Mulgore", "zone", "Kalimdor" },
+  { 1413, "The Barrens", "zone", "Kalimdor" },
+  { 1416, "Alterac Mountains", "zone", "Eastern Kingdoms" },
+  { 1417, "Arathi Highlands", "zone", "Eastern Kingdoms" },
+  { 1418, "Badlands", "zone", "Eastern Kingdoms" },
+  { 1419, "Blasted Lands", "zone", "Eastern Kingdoms" },
+  { 1420, "Tirisfal Glades", "zone", "Eastern Kingdoms" },
+  { 1421, "Silverpine Forest", "zone", "Eastern Kingdoms" },
+  { 1422, "Western Plaguelands", "zone", "Eastern Kingdoms" },
+  { 1423, "Eastern Plaguelands", "zone", "Eastern Kingdoms" },
+  { 1424, "Hillsbrad Foothills", "zone", "Eastern Kingdoms" },
+  { 1425, "The Hinterlands", "zone", "Eastern Kingdoms" },
+  { 1426, "Dun Morogh", "zone", "Eastern Kingdoms" },
+  { 1427, "Searing Gorge", "zone", "Eastern Kingdoms" },
+  { 1428, "Burning Steppes", "zone", "Eastern Kingdoms" },
+  { 1429, "Elwynn Forest", "zone", "Eastern Kingdoms" },
+  { 1430, "Deadwind Pass", "zone", "Eastern Kingdoms" },
+  { 1431, "Duskwood", "zone", "Eastern Kingdoms" },
+  { 1432, "Loch Modan", "zone", "Eastern Kingdoms" },
+  { 1433, "Redridge Mountains", "zone", "Eastern Kingdoms" },
+  { 1434, "Stranglethorn Vale", "zone", "Eastern Kingdoms" },
+  { 1435, "Swamp of Sorrows", "zone", "Eastern Kingdoms" },
+  { 1436, "Westfall", "zone", "Eastern Kingdoms" },
+  { 1437, "Wetlands", "zone", "Eastern Kingdoms" },
+  { 1438, "Teldrassil", "zone", "Kalimdor" },
+  { 1439, "Darkshore", "zone", "Kalimdor" },
+  { 1440, "Ashenvale", "zone", "Kalimdor" },
+  { 1441, "Thousand Needles", "zone", "Kalimdor" },
+  { 1442, "Stonetalon Mountains", "zone", "Kalimdor" },
+  { 1443, "Desolace", "zone", "Kalimdor" },
+  { 1444, "Feralas", "zone", "Kalimdor" },
+  { 1445, "Dustwallow Marsh", "zone", "Kalimdor" },
+  { 1446, "Tanaris", "zone", "Kalimdor" },
+  { 1447, "Azshara", "zone", "Kalimdor" },
+  { 1448, "Felwood", "zone", "Kalimdor" },
+  { 1449, "Un'Goro Crater", "zone", "Kalimdor" },
+  { 1450, "Moonglade", "zone", "Kalimdor" },
+  { 1451, "Silithus", "zone", "Kalimdor" },
+  { 1452, "Winterspring", "zone", "Kalimdor" },
+  { 1453, "Stormwind City", "city", "Eastern Kingdoms" },
+  { 1454, "Orgrimmar", "city", "Kalimdor" },
+  { 1455, "Ironforge", "city", "Eastern Kingdoms" },
+  { 1456, "Thunder Bluff", "city", "Kalimdor" },
+  { 1457, "Darnassus", "city", "Kalimdor" },
+  { 1458, "Undercity", "city", "Eastern Kingdoms" },
+  { 1459, "Alterac Valley", "battleground", "Azeroth" },
+  { 1460, "Warsong Gulch", "battleground", "Azeroth" },
+  { 1461, "Arathi Basin", "battleground", "Azeroth" },
 }
 
 UHCC.OPTIONS = (function()
@@ -123,6 +179,15 @@ UHCC.OPTIONS = (function()
       inputType = "checkbox",
     },
     {
+      checkboxId = "QUALITY-EPIC",
+      label = "Quality Tier 6 - Epic Gear",
+      cost = 20000,
+      category = "gear_quality",
+      term = "epic",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
       checkboxId = "GEAR-CLOAKS",
       label = "Cloaks",
       cost = 500,
@@ -162,7 +227,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "GEAR-QUEST",
       label = "Wear Quest Gear",
       cost = 5000,
-      category = "gear_rules",
+      category = "gear_quest",
       term = "quest_gear",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -196,33 +261,97 @@ UHCC.OPTIONS = (function()
     { checkboxId = "SERVICE-BANK", label = "Bank", cost = 2000, category = "services", term = "bank", tab = "weapons_services", inputType = "checkbox" },
 
     -- Professions & Talents
-    { checkboxId = "PROF-PRIMARY1", label = "Primary Profession 1", cost = 0, isFree = true, category = "professions", term = "primary1", tab = "professions_talents", inputType = "checkbox" },
+    {
+      checkboxId = "PROF-PRIMARY1",
+      label = "Primary Profession 1",
+      cost = 0,
+      noFreeLock = true,
+      category = "professions",
+      term = "primary1",
+      tab = "professions_talents",
+      inputType = "checkbox",
+    },
     { checkboxId = "PROF-PRIMARY2", label = "Primary Profession 2", cost = 500, category = "professions", term = "primary2", tab = "professions_talents", inputType = "checkbox" },
     { checkboxId = "PROF-SECONDARY1", label = "Secondary Profession 1", cost = 1000, category = "professions", term = "secondary1", tab = "professions_talents", inputType = "checkbox" },
     { checkboxId = "PROF-SECONDARY2", label = "Secondary Profession 2", cost = 2500, category = "professions", term = "secondary2", tab = "professions_talents", inputType = "checkbox" },
     { checkboxId = "PROF-SECONDARY3", label = "Secondary Profession 3", cost = 5000, category = "professions", term = "secondary3", tab = "professions_talents", inputType = "checkbox" },
-    { checkboxId = "TALENT-POINTS", label = "Talent points", cost = 100, category = "talents", term = "points", tab = "professions_talents", inputType = "range", min = 0, max = 40, step = 1 },
+    { checkboxId = "TALENT-POINTS", label = "Talent points", cost = 100, category = "talents", term = "points", tab = "professions_talents", inputType = "range", min = 0, max = 50, step = 1 },
 
-    -- Settings
-    { checkboxId = "SETTINGS-ANNOY", label = "Annoy me", cost = 0, category = "settings", term = "annoy", tab = "settings", inputType = "checkbox" },
+    -- Settings (no prices; descriptions shown in a simple layout on the Settings tab)
+    {
+      checkboxId = "SETTINGS-ANNOY",
+      label = "Annoy me",
+      description = "The addon will try to prevent you from doing things you shouldn't by annoying you to the max.",
+      cost = 0,
+      category = "settings",
+      term = "annoy",
+      tab = "settings",
+      inputType = "checkbox",
+    },
   }
 
-  -- Zones & Dungeons placeholders
-  for i = 1, 30 do
-    t[#t + 1] = { checkboxId = ("ZONE-%02d"):format(i), label = ("Zone %d"):format(i), cost = 0, category = "zones", term = tostring(i), tab = "zones_dungeons", inputType = "checkbox" }
-  end
-  for i = 1, 8 do
-    t[#t + 1] = { checkboxId = ("CITY-%02d"):format(i), label = ("City %d"):format(i), cost = 0, category = "cities", term = tostring(i), tab = "zones_dungeons", inputType = "checkbox" }
-  end
-  for i = 1, 15 do
-    t[#t + 1] = { checkboxId = ("DUNGEON-%02d"):format(i), label = ("Dungeon %d"):format(i), cost = 0, category = "dungeons", term = tostring(i), tab = "zones_dungeons", inputType = "checkbox" }
-  end
-  for i = 1, 5 do
-    t[#t + 1] = { checkboxId = ("RAID-%02d"):format(i), label = ("Raid %d"):format(i), cost = 0, category = "raids", term = tostring(i), tab = "zones_dungeons", inputType = "checkbox" }
+  -- Zones & Dungeons: one checkbox per map from UHCC.WORLD_ZONES; 3 gold each (UHCC cost unit: floor(cost/100) = gold).
+  -- Per continent: zones section then Cities section; Azeroth CSV rows → Battlegrounds column only.
+  do
+    local ZONE_OPTION_COST = 300
+    local buckets = {
+      kalimdor_zones = {},
+      kalimdor_cities = {},
+      ek_zones = {},
+      ek_cities = {},
+      battlegrounds = {},
+    }
+    for _, row in ipairs(UHCC.WORLD_ZONES) do
+      local ztype, cont = row[3], row[4]
+      local b
+      if cont == "Azeroth" or ztype == "battleground" then
+        b = buckets.battlegrounds
+      elseif cont == "Kalimdor" then
+        b = (ztype == "city") and buckets.kalimdor_cities or buckets.kalimdor_zones
+      elseif cont == "Eastern Kingdoms" then
+        b = (ztype == "city") and buckets.ek_cities or buckets.ek_zones
+      end
+      if b then
+        b[#b + 1] = row
+      end
+    end
+    local emitOrder = {
+      "kalimdor_zones",
+      "kalimdor_cities",
+      "ek_zones",
+      "ek_cities",
+      "battlegrounds",
+    }
+    for _, catKey in ipairs(emitOrder) do
+      for _, row in ipairs(buckets[catKey]) do
+        t[#t + 1] = {
+          checkboxId = ("ZONE-%d"):format(row[1]),
+          label = row[2],
+          cost = ZONE_OPTION_COST,
+          category = catKey,
+          term = tostring(row[1]),
+          tab = "zones_dungeons",
+          inputType = "checkbox",
+        }
+      end
+    end
   end
 
   return t
 end)()
+
+-- UI map ID → zone purchase checkbox (term stores map id as string).
+local UHCC_ZONE_OPTION_BY_MAP_ID = {}
+do
+  for _, opt in ipairs(UHCC.OPTIONS) do
+    if opt.tab == "zones_dungeons" and opt.inputType == "checkbox" then
+      local mid = tonumber(opt.term)
+      if mid then
+        UHCC_ZONE_OPTION_BY_MAP_ID[mid] = opt
+      end
+    end
+  end
+end
 
 local function clamp(v, minV, maxV)
   if v < minV then return minV end
@@ -246,6 +375,339 @@ local function ensureDB()
   UHCC_DB.minimap.radius = clamp(UHCC_DB.minimap.radius, 30, 110)
   UHCC_DB.minimap.angle = normalizeAngle(UHCC_DB.minimap.angle)
 end
+
+-- Forward declaration: set after ensureCharDB (used by welcome + level-advice popups).
+local uhccShowWelcomePopup
+
+-- Session guard: /reload clears this so onboarding can run again until welcome is saved.
+local uhccOnboardingTimerScheduled = false
+
+local function ensureCharDB()
+  if type(UHCC_CharDB) ~= "table" then UHCC_CharDB = {} end
+  if type(UHCC_CharDB.options) ~= "table" then UHCC_CharDB.options = {} end
+  if UHCC_CharDB._uhccFirstAddonLoad == nil then
+    UHCC_CharDB._uhccFirstAddonLoad = true
+  end
+end
+
+uhccShowWelcomePopup = function()
+  ensureCharDB()
+  if UHCC_CharDB._uhccWelcomeSeen then return end
+  UHCC_CharDB._uhccWelcomeSeen = true
+  uhccOnboardingTimerScheduled = false
+  if StaticPopupDialogs and StaticPopupDialogs["UHCC_WELCOME"] then
+    StaticPopup_Show("UHCC_WELCOME")
+  end
+end
+
+-- Run after PLAYER_ENTERING_WORLD so UnitLevel is valid; not tied to _uhccFirstAddonLoad (/reload would skip otherwise).
+local function uhccScheduleOnboardingIfNeeded()
+  ensureCharDB()
+  if UHCC_CharDB._uhccWelcomeSeen then return end
+  local virginOptions = true
+  for _ in pairs(UHCC_CharDB.options) do
+    virginOptions = false
+    break
+  end
+  if not virginOptions then return end
+  if uhccOnboardingTimerScheduled then return end
+  uhccOnboardingTimerScheduled = true
+  C_Timer.After(1.5, function()
+    ensureCharDB()
+    if UHCC_CharDB._uhccWelcomeSeen then
+      uhccOnboardingTimerScheduled = false
+      return
+    end
+    local lvl = UnitLevel("player")
+    if lvl and lvl > 1 and not UHCC_CharDB._uhccNonLevel1AdviceSeen then
+      if StaticPopupDialogs and StaticPopupDialogs["UHCC_NON_LEVEL1_ADVICE"] then
+        StaticPopup_Show("UHCC_NON_LEVEL1_ADVICE")
+      else
+        uhccShowWelcomePopup()
+      end
+    else
+      uhccShowWelcomePopup()
+    end
+  end)
+end
+
+-- isFree = forced checked + disabled; noFreeLock = never lock (e.g. cost 0 but still a normal checkbox).
+local function optionLocksFreeChoice(opt)
+  if not opt or opt.noFreeLock then return false end
+  return opt.isFree
+end
+
+-- Armor weight tiers each class can equip (Classic Era). classFile = 2nd return of UnitClass("player").
+local CLASS_ARMOR_ALLOWED = {
+  WARRIOR = { cloth = true, leather = true, mail = true, plate = true },
+  PALADIN = { cloth = true, leather = true, mail = true, plate = true },
+  DEATHKNIGHT = { cloth = true, leather = true, mail = true, plate = true },
+  HUNTER = { cloth = true, leather = true, mail = true, plate = false },
+  ROGUE = { cloth = true, leather = true, mail = false, plate = false },
+  PRIEST = { cloth = true, leather = false, mail = false, plate = false },
+  SHAMAN = { cloth = true, leather = true, mail = true, plate = false },
+  MAGE = { cloth = true, leather = false, mail = false, plate = false },
+  WARLOCK = { cloth = true, leather = false, mail = false, plate = false },
+  DRUID = { cloth = true, leather = true, mail = false, plate = false },
+}
+
+local function playerCanUseGearArmorTerm(term)
+  if term == "none" or term == nil or term == "" then return true end
+  local _, classFile = UnitClass("player")
+  if not classFile then return true end
+  local allowed = CLASS_ARMOR_ALLOWED[classFile]
+  if not allowed then return true end
+  return not not allowed[term]
+end
+
+local function isGearArmorTierOption(opt)
+  return opt
+    and opt.tab == "gear_quality"
+    and opt.category == "gear_type"
+    and opt.inputType == "checkbox"
+    and opt.term
+    and opt.term ~= "none"
+end
+
+local function pruneInvalidGearArmorSelections()
+  ensureCharDB()
+  for _, opt in ipairs(UHCC.OPTIONS) do
+    if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
+      UHCC_CharDB.options[opt.checkboxId] = false
+    end
+  end
+end
+
+-- UHCC cost: gold = floor(cost/100) display silver = cost%100 (see formatCostSilver) → WoW copper.
+local function uhccCostToCopper(displayCost)
+  displayCost = tonumber(displayCost) or 0
+  if displayCost < 0 then displayCost = 0 end
+  return math.floor(displayCost / 100) * 10000 + (displayCost % 100) * 100
+end
+
+local function getCharCheckboxState(opt)
+  ensureCharDB()
+  if not opt or not opt.checkboxId then return false end
+  if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
+    return false
+  end
+  local v = UHCC_CharDB.options[opt.checkboxId]
+  if v == nil then return false end
+  return not not v
+end
+
+local function computeTotalSpentCopperFromCharDB()
+  ensureCharDB()
+  local total = 0
+  for _, opt in ipairs(UHCC.OPTIONS) do
+    if opt.tab ~= "settings" then
+      if opt.inputType == "checkbox" then
+        if not optionLocksFreeChoice(opt) then
+          if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
+            -- cannot equip: never counts toward Spent
+          elseif UHCC_CharDB.options[opt.checkboxId] then
+            total = total + uhccCostToCopper(opt.cost)
+          end
+        end
+      elseif opt.inputType == "range" then
+        local mn, mx = opt.min or 0, opt.max or 100
+        local v = tonumber(UHCC_CharDB.options[opt.checkboxId])
+        if v == nil then v = mn end
+        v = clamp(math.floor(v + 0.5), mn, mx)
+        local per = tonumber(opt.cost) or 0
+        total = total + uhccCostToCopper(per * v)
+      end
+    end
+  end
+  return total
+end
+
+-- Zone restriction overlay: unpurchased zone → dark screen (mouse passes through).
+local uhccZoneRestrictionOverlayFrame = nil
+local uhccZoneOverlayViolationStart = nil
+local uhccZoneOverlayFadeOutStart = nil
+local uhccZoneOverlayFadeOutAlpha0 = 0
+local uhccZoneOverlayCurrentAlpha = 0
+local UHCC_ZONE_OVERLAY_MAX_ALPHA = 0.9
+local UHCC_ZONE_FADE_IN_SEC = 10
+local UHCC_ZONE_FADE_OUT_SEC = 3
+
+local function uhccFindZoneOptionForPlayerMap()
+  if not C_Map or not C_Map.GetBestMapForUnit or not C_Map.GetMapInfo then
+    return nil
+  end
+  local mapID = C_Map.GetBestMapForUnit("player")
+  if not mapID or mapID == 0 then
+    return nil
+  end
+  local seen = {}
+  while mapID and mapID ~= 0 and not seen[mapID] do
+    seen[mapID] = true
+    local opt = UHCC_ZONE_OPTION_BY_MAP_ID[mapID]
+    if opt then
+      return opt
+    end
+    local info = C_Map.GetMapInfo(mapID)
+    if not info then
+      break
+    end
+    local parent = info.parentMapID
+    if not parent or parent == 0 then
+      break
+    end
+    mapID = parent
+  end
+  return nil
+end
+
+local function uhccZonePurchaseViolationActive()
+  local opt = uhccFindZoneOptionForPlayerMap()
+  if not opt then
+    return false, nil
+  end
+  ensureCharDB()
+  if getCharCheckboxState(opt) then
+    return false, nil
+  end
+  return true, opt
+end
+
+local function uhccZoneRestrictionOverlayUpdate()
+  local f = uhccZoneRestrictionOverlayFrame
+  if not f then
+    return
+  end
+  local now = GetTime()
+  local inViol, opt = uhccZonePurchaseViolationActive()
+
+  if inViol and opt then
+    f.uhccLastZoneLabel = opt.label
+    uhccZoneOverlayFadeOutStart = nil
+    if not uhccZoneOverlayViolationStart then
+      uhccZoneOverlayViolationStart = now
+    end
+    local elapsedIn = now - uhccZoneOverlayViolationStart
+    uhccZoneOverlayCurrentAlpha = math.min(
+      UHCC_ZONE_OVERLAY_MAX_ALPHA,
+      (elapsedIn / UHCC_ZONE_FADE_IN_SEC) * UHCC_ZONE_OVERLAY_MAX_ALPHA
+    )
+  else
+    uhccZoneOverlayViolationStart = nil
+    if uhccZoneOverlayCurrentAlpha > 0.001 then
+      if not uhccZoneOverlayFadeOutStart then
+        uhccZoneOverlayFadeOutStart = now
+        uhccZoneOverlayFadeOutAlpha0 = uhccZoneOverlayCurrentAlpha
+      end
+      local te = now - uhccZoneOverlayFadeOutStart
+      if te >= UHCC_ZONE_FADE_OUT_SEC then
+        uhccZoneOverlayFadeOutStart = nil
+        uhccZoneOverlayCurrentAlpha = 0
+        f.uhccLastZoneLabel = nil
+      else
+        uhccZoneOverlayCurrentAlpha = uhccZoneOverlayFadeOutAlpha0 * (1 - te / UHCC_ZONE_FADE_OUT_SEC)
+      end
+    else
+      uhccZoneOverlayFadeOutStart = nil
+      uhccZoneOverlayCurrentAlpha = 0
+      f.uhccLastZoneLabel = nil
+    end
+  end
+
+  local a = uhccZoneOverlayCurrentAlpha
+  if f.bg then
+    f.bg:SetAlpha(a)
+  end
+  if a > 0.02 and f.uhccLastZoneLabel then
+    local w = math.min(900, (GetScreenWidth and GetScreenWidth() or UIParent:GetWidth()) * 0.88)
+    f.msg:SetWidth(w)
+    f.msg:SetText(
+      ("You haven't purchased this zone: '%s'. Get out or purchase now."):format(f.uhccLastZoneLabel)
+    )
+    f.msg:SetAlpha(math.min(1, a / UHCC_ZONE_OVERLAY_MAX_ALPHA))
+    f.msg:Show()
+  else
+    f.msg:Hide()
+  end
+  if a > 0.001 then
+    f:Show()
+  else
+    f:Hide()
+  end
+end
+
+local function createUhccZoneRestrictionOverlay()
+  if uhccZoneRestrictionOverlayFrame then
+    return
+  end
+  local f = CreateFrame("Frame", "UHCC_ZoneRestrictionOverlay", UIParent)
+  f:SetFrameStrata("FULLSCREEN")
+  f:SetFrameLevel(5000)
+  f:SetAllPoints(UIParent)
+  f:SetDontSavePosition(true)
+  f:EnableMouse(false)
+  f:EnableKeyboard(false)
+
+  local bg = f:CreateTexture(nil, "BACKGROUND")
+  bg:SetAllPoints()
+  bg:SetColorTexture(0, 0, 0, 1)
+  bg:SetAlpha(0)
+  f.bg = bg
+
+  local msg = f:CreateFontString(nil, "OVERLAY")
+  msg:SetFontObject("GameFontNormalHuge")
+  msg:SetPoint("CENTER", 0, 0)
+  msg:SetJustifyH("CENTER")
+  msg:SetTextColor(1, 0.12, 0.12, 1)
+  msg:SetShadowOffset(2, -2)
+  msg:SetShadowColor(0, 0, 0, 1)
+  msg:SetWordWrap(true)
+  msg:Hide()
+  f.msg = msg
+
+  f:SetScript("OnUpdate", function()
+    uhccZoneRestrictionOverlayUpdate()
+  end)
+  f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+  f:RegisterEvent("ZONE_CHANGED")
+  f:RegisterEvent("PLAYER_ENTERING_WORLD")
+  f:SetScript("OnEvent", function()
+    uhccZoneRestrictionOverlayUpdate()
+  end)
+
+  uhccZoneRestrictionOverlayFrame = f
+  f:Hide()
+end
+
+local function recalcSpentDisplay()
+  local copper = computeTotalSpentCopperFromCharDB()
+  local mf = UHCC.mainFrame
+  if mf and mf.SetSpentCopper then
+    mf:SetSpentCopper(copper)
+  end
+  uhccZoneRestrictionOverlayUpdate()
+end
+
+UHCC.RecalculateSpent = recalcSpentDisplay
+
+local function resetCharChallengeData()
+  ensureCharDB()
+  for k in pairs(UHCC_CharDB) do
+    UHCC_CharDB[k] = nil
+  end
+  UHCC_CharDB.options = {}
+  uhccOnboardingTimerScheduled = false
+  ensureCharDB()
+  if UHCC.mainFrame then
+    UHCC.mainFrame:Hide()
+    UHCC.mainFrame:SetParent(nil)
+    UHCC.mainFrame = nil
+  end
+  recalcSpentDisplay()
+  print("|cffffcc00UHCC|r: All character data for this addon was reset. Reopen the window to apply.")
+  C_Timer.After(0.75, uhccScheduleOnboardingIfNeeded)
+end
+
+UHCC.ResetCharacterData = resetCharChallengeData
 
 local function getAddonVersion()
   local v = GetAddOnMetadata(ADDON_NAME, "Version")
@@ -402,9 +864,12 @@ local function buildTabPage(panel, tabName, spec)
 
   local scroll, child = createScrollContent(panel)
 
-  local colX = { 8, 300, 592 }
+  local innerScrollW = MAIN_FRAME_WIDTH - 64
+  local colPitch = math.floor((innerScrollW - 16) / 3)
+  local colX = { 8, 8 + colPitch, 8 + colPitch * 2 }
   local rowH = 24
-  local maxRows = 15
+  -- Zones tab: up to ~25 rows per continent in one column; default 15 is enough for other tabs.
+  local maxRows = (tabName == "Zones & Dungeons") and 30 or 15
   local maxCols = 3
   local blockGap = 12
 
@@ -422,6 +887,7 @@ local function buildTabPage(panel, tabName, spec)
 
   local line = 0
   local perBlock = maxRows * maxCols
+  local settingsCursorY = 12 -- distance from top of scroll child (downward) for Settings layout
 
   local function setColumnStart(targetCol)
     targetCol = tonumber(targetCol)
@@ -431,6 +897,14 @@ local function buildTabPage(panel, tabName, spec)
 
     local currentBlock = math.floor(line / perBlock)
     local candidate = (currentBlock * perBlock) + (targetCol * maxRows)
+    local within = line % perBlock
+    local currentCol = math.floor(within / maxRows)
+
+    -- Same column as requested: keep stacking in this column instead of jumping to the next block.
+    if line > candidate and currentCol == targetCol then
+      return
+    end
+
     if line > candidate then
       currentBlock = currentBlock + 1
       candidate = (currentBlock * perBlock) + (targetCol * maxRows)
@@ -454,6 +928,13 @@ local function buildTabPage(panel, tabName, spec)
       cb.UHCC_option = item.option
       cb.checkboxId = item.option and item.option.checkboxId or nil
       cb.cost = item.option and item.option.cost or nil
+      if cb.checkboxId and cb:IsEnabled() then
+        cb:HookScript("OnClick", function(self)
+          ensureCharDB()
+          UHCC_CharDB.options[self.checkboxId] = self:GetChecked() and true or false
+          recalcSpentDisplay()
+        end)
+      end
       line = line + 1
     elseif item.kind == "slider" then
       local x, y = lineToPos(line)
@@ -468,7 +949,14 @@ local function buildTabPage(panel, tabName, spec)
       slider:SetMinMaxValues(item.min, item.max)
       slider:SetValueStep(item.step or 1)
       slider:SetObeyStepOnDrag(true)
-      slider:SetValue(item.min)
+      local startVal = item.min or 0
+      if item.option and item.option.checkboxId then
+        ensureCharDB()
+        local sv = tonumber(UHCC_CharDB.options[item.option.checkboxId])
+        if sv ~= nil then
+          startVal = clamp(math.floor(sv + 0.5), item.min, item.max)
+        end
+      end
 
       local low = _G[sliderName .. "Low"]
       local high = _G[sliderName .. "High"]
@@ -479,28 +967,114 @@ local function buildTabPage(panel, tabName, spec)
 
       local valueText = child:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
       valueText:SetPoint("LEFT", slider, "RIGHT", 10, 0)
-      valueText:SetText(tostring(item.min))
+      valueText:SetText(tostring(math.floor(startVal + 0.5)))
+      -- Avoid persisting on SetValue() so "virgin" onboarding still runs after PLAYER_ENTERING_WORLD.
+      slider.UHCC_readyForPersist = false
       slider:SetScript("OnValueChanged", function(_, value)
-        valueText:SetText(tostring(math.floor(value + 0.5)))
+        local iv = math.floor(value + 0.5)
+        valueText:SetText(tostring(iv))
+        if not slider.UHCC_readyForPersist then return end
+        if item.option and item.option.checkboxId then
+          ensureCharDB()
+          UHCC_CharDB.options[item.option.checkboxId] = iv
+          recalcSpentDisplay()
+        end
       end)
+      slider:SetValue(startVal)
+      slider.UHCC_readyForPersist = true
 
       -- Slider consumes ~3 lines of height in our grid.
       line = line + 3
+    elseif item.kind == "settings_checkbox" then
+      local padX = 16
+      local y = -settingsCursorY
+      local cb = CreateFrame("CheckButton", nil, child, "UICheckButtonTemplate")
+      cb:SetPoint("TOPLEFT", child, "TOPLEFT", padX, y)
+      cb.Text:SetText(item.label)
+      cb.Text:SetFontObject("GameFontNormalLarge")
+      cb.Text:SetTextColor(1, 1, 1, 1)
+
+      if item.opts and item.opts.checked then cb:SetChecked(true) end
+      if item.opts and item.opts.disabled then
+        cb:SetEnabled(false)
+        cb.Text:SetTextColor(0.7, 0.7, 0.7, 1)
+      end
+
+      cb.UHCC_option = item.option
+      cb.checkboxId = item.option and item.option.checkboxId or nil
+      cb.cost = item.option and item.option.cost or nil
+
+      local desc = child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+      desc:SetPoint("TOPLEFT", cb, "BOTTOMLEFT", 28, -8)
+      desc:SetWidth(math.max(200, innerScrollW - 48))
+      desc:SetJustifyH("LEFT")
+      desc:SetNonSpaceWrap(false)
+      desc:SetText(item.description or "")
+
+      local descH = desc:GetStringHeight() or 0
+      settingsCursorY = settingsCursorY + 26 + 8 + math.max(descH, 14) + 24
     end
   end
 
-  local height = math.max(1, math.ceil(line / (maxRows * maxCols)) * (maxRows * rowH + blockGap) + 60)
+  local gridHeight = math.max(1, math.ceil(line / (maxRows * maxCols)) * (maxRows * rowH + blockGap) + 60)
+  local height = math.max(gridHeight, settingsCursorY + 36)
   child:SetSize(1, height)
   scroll:SetVerticalScroll(0)
+end
+
+-- Custom tab strip: Blizzard CharacterFrameTabButtonTemplate + PanelTemplates fights custom widths
+-- (clipped on load, all tabs resize on click, hover layout shift). We use plain Buttons + fixed width.
+
+local tabMeasureFontString
+local function measureFontObjectTextWidth(text, fontObject)
+  if not tabMeasureFontString then
+    tabMeasureFontString = UIParent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    tabMeasureFontString:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -4000, -4000)
+  end
+  tabMeasureFontString:SetFontObject(fontObject)
+  tabMeasureFontString:SetText(text or "")
+  tabMeasureFontString:SetWidth(0)
+  tabMeasureFontString:SetNonSpaceWrap(false)
+  local w = tabMeasureFontString:GetStringWidth() or 0
+  return math.ceil(math.max(w, 0))
+end
+
+local function computeUniformTabWidthForLabels(labels)
+  local w = 0
+  for _, lab in ipairs(labels) do
+    w = math.max(w, measureFontObjectTextWidth(lab, GameFontNormalSmall))
+    w = math.max(w, measureFontObjectTextWidth(lab, GameFontHighlightSmall))
+  end
+  return math.max(w + 28, 100)
+end
+
+local function applyCustomTabLook(tab, selected)
+  local bg = tab.UHCC_bg
+  local fs = tab:GetFontString()
+  if not bg or not fs then return end
+  fs:SetJustifyH("CENTER")
+  fs:SetWidth(0)
+  fs:SetNonSpaceWrap(false)
+  if selected then
+    bg:SetColorTexture(0.42, 0.34, 0.14, 1)
+    fs:SetFontObject(GameFontHighlightSmall)
+    fs:SetTextColor(1, 1, 0.85, 1)
+  else
+    bg:SetColorTexture(0.12, 0.12, 0.12, 0.98)
+    fs:SetFontObject(GameFontNormalSmall)
+    fs:SetTextColor(0.82, 0.82, 0.82, 1)
+  end
 end
 
 local function setTabSelected(tabId)
   local f = UHCC.mainFrame
   if not f then return end
-
-  PanelTemplates_SetTab(f, tabId)
-  PanelTemplates_UpdateTabs(f)
+  f.UHCC_selectedTabId = tabId
   for i = 1, (f.numTabs or 0) do
+    local tbtn = _G[("UHCC_MainFrameTab%d"):format(i)]
+    if tbtn then
+      applyCustomTabLook(tbtn, i == tabId)
+    end
     local panel = f.tabPanels and f.tabPanels[i]
     if panel then
       if i == tabId then panel:Show() else panel:Hide() end
@@ -511,16 +1085,28 @@ end
 local function createMainWindow()
   if UHCC.mainFrame then return UHCC.mainFrame end
 
+  ensureCharDB()
+  pruneInvalidGearArmorSelections()
+
   local f = CreateFrame("Frame", "UHCC_MainFrame", UIParent, "BasicFrameTemplateWithInset")
   UHCC.mainFrame = f
 
-  f:SetSize(920, 560)
+  f:SetSize(MAIN_FRAME_WIDTH, MAIN_FRAME_HEIGHT)
   f:SetPoint("CENTER")
+  -- Stay above most UI (incl. autres addons); juste sous TOOLTIP pour ne pas masquer les bulles utiles.
+  f:SetFrameStrata("FULLSCREEN_DIALOG")
+  f:SetFrameLevel(500)
+  f:SetToplevel(true)
   f:SetMovable(true)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
   f:SetScript("OnDragStart", function(self) self:StartMoving() end)
   f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+  f:SetScript("OnShow", function(self)
+    self:SetFrameStrata("FULLSCREEN_DIALOG")
+    self:SetFrameLevel(500)
+    self:Raise()
+  end)
   f:Hide()
 
   tinsert(UISpecialFrames, f:GetName())
@@ -547,6 +1133,23 @@ local function createMainWindow()
   local defaultTabId = settingsTabId -- show Settings by default
 
   local function buildSpecForTab(tabKey)
+    if tabKey == "settings" then
+      local spec = {}
+      for _, opt in ipairs(UHCC.OPTIONS) do
+        if opt.tab == "settings" and opt.inputType == "checkbox" then
+          local annoyOn = getCharCheckboxState(opt)
+          spec[#spec + 1] = {
+            kind = "settings_checkbox",
+            label = (opt.label or "") .. " - Under dev",
+            description = opt.description or "",
+            opts = { checked = annoyOn, disabled = true },
+            option = opt,
+          }
+        end
+      end
+      return spec
+    end
+
     local spec = {}
 
     local sectionTitles = nil
@@ -556,7 +1159,13 @@ local function createMainWindow()
         gear_type = "Gear",
         gear_quality = "Quality",
         gear_slots = "Accessories",
-        gear_rules = "Quest Gear",
+        gear_quest = "Quest Gear",
+      }
+      sectionColumns = { -- // 0 to 2 max columns
+        gear_type = 0,
+        gear_quality = 1,
+        gear_slots = 2,
+        gear_quest = 2,
       }
     elseif tabKey == "weapons_services" then
       sectionTitles = {
@@ -564,32 +1173,63 @@ local function createMainWindow()
         bags = "Bags",
         services = "Services",
       }
-      sectionColumns = {
+      sectionColumns = { -- // 0 to 2 max columns
         weapons = 0,
         bags = 1,
         services = 2,
+      }
+    elseif tabKey == "professions_talents" then
+      sectionTitles = {
+        professions = "Professions",
+        talents = "Talents",
+      }
+    elseif tabKey == "zones_dungeons" then
+      sectionTitles = {
+        kalimdor_zones = "Kalimdor",
+        kalimdor_cities = "Cities",
+        ek_zones = "Eastern Kingdoms",
+        ek_cities = "Cities",
+        battlegrounds = "Battlegrounds",
+      }
+      sectionColumns = {
+        kalimdor_zones = 0,
+        kalimdor_cities = 0,
+        ek_zones = 1,
+        ek_cities = 1,
+        battlegrounds = 2,
       }
     end
 
     local lastSection = nil
     for _, opt in ipairs(UHCC.OPTIONS) do
       if opt.tab == tabKey then
-        if sectionTitles and opt.inputType == "checkbox" and sectionTitles[opt.category] and lastSection ~= opt.category then
-          if #spec > 0 then spec[#spec + 1] = { kind = "spacer" } end
-          spec[#spec + 1] = {
-            kind = "section",
-            text = sectionTitles[opt.category],
-            column = sectionColumns and sectionColumns[opt.category] or nil,
-          }
-          lastSection = opt.category
+        if sectionTitles and sectionTitles[opt.category] and lastSection ~= opt.category then
+          if opt.inputType == "checkbox" or opt.inputType == "range" then
+            if #spec > 0 then spec[#spec + 1] = { kind = "spacer" } end
+            spec[#spec + 1] = {
+              kind = "section",
+              text = sectionTitles[opt.category],
+              column = sectionColumns and sectionColumns[opt.category] or nil,
+            }
+            lastSection = opt.category
+          end
         end
 
         if opt.inputType == "checkbox" then
           local text = opt.label .. formatCostSilver(opt.cost)
+          local armorDenied = isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term)
+          local chkOpts = nil
+          if armorDenied then
+            chkOpts = { checked = false, disabled = true }
+          elseif optionLocksFreeChoice(opt) then
+            chkOpts = { checked = true, disabled = true }
+          elseif getCharCheckboxState(opt) then
+            chkOpts = { checked = true }
+          end
           spec[#spec + 1] = {
             kind = "checkbox",
             text = text,
-            opts = opt.isFree and { checked = true, disabled = true } or nil,
+            opts = chkOpts,
             option = opt,
           }
         elseif opt.inputType == "range" then
@@ -615,21 +1255,33 @@ local function createMainWindow()
     TAB_SPECS[tabInfo.label] = buildSpecForTab(tabInfo.tab)
   end
 
+  local tabUniformWidth = computeUniformTabWidthForLabels(tabNames)
+
   for i = 1, #tabNames do
-    local tab = CreateFrame("Button", ("UHCC_MainFrameTab%d"):format(i), f, "CharacterFrameTabButtonTemplate")
+    local tab = CreateFrame("Button", ("UHCC_MainFrameTab%d"):format(i), f)
+    tab:SetSize(tabUniformWidth, 26)
     tab:SetID(i)
     tab:SetText(tabNames[i])
+    tab:SetNormalFontObject(GameFontNormalSmall)
+    tab:SetHighlightFontObject(GameFontNormalSmall)
+    tab:SetDisabledFontObject(GameFontDisableSmall)
+    tab:SetPushedTextOffset(0, 0)
+
+    local bg = tab:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    tab.UHCC_bg = bg
+
+    local hi = tab:CreateTexture(nil, "HIGHLIGHT")
+    hi:SetAllPoints()
+    hi:SetColorTexture(1, 1, 1, 0.08)
+    hi:SetBlendMode("ADD")
+
     tab:SetScript("OnClick", function(self) setTabSelected(self:GetID()) end)
 
     if i == 1 then
       tab:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -30)
     else
-      tab:SetPoint("LEFT", _G[("UHCC_MainFrameTab%d"):format(i - 1)], "RIGHT", -15, 0)
-    end
-
-    PanelTemplates_TabResize(tab, 14)
-    if tab.GetTextWidth and tab:GetTextWidth() then
-      tab:SetWidth(tab:GetTextWidth() + 40)
+      tab:SetPoint("LEFT", _G[("UHCC_MainFrameTab%d"):format(i - 1)], "RIGHT", 3, 0)
     end
 
     local panel = CreateFrame("Frame", nil, content)
@@ -639,7 +1291,6 @@ local function createMainWindow()
     buildTabPage(panel, tabNames[i], TAB_SPECS[tabNames[i]] or {})
   end
 
-  PanelTemplates_SetNumTabs(f, f.numTabs)
   setTabSelected(defaultTabId)
 
   -- Spent counter (top-right)
@@ -664,10 +1315,9 @@ local function createMainWindow()
 
   function f:SetSpentCopper(copper)
     local g, s = formatGoldSilverFromCopper(copper)
-    s = 30
     spentValue:SetText(("%02d %s %02d %s"):format(g, goldIcon, s, silverIcon))
   end
-  f:SetSpentCopper(0)
+  recalcSpentDisplay()
 
   -- Close button (bottom-right)
   local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
@@ -684,6 +1334,8 @@ function UHCC:ToggleMainFrame()
   if f:IsShown() then
     f:Hide()
   else
+    f:SetFrameStrata("FULLSCREEN_DIALOG")
+    f:SetFrameLevel(500)
     f:Show()
     f:Raise()
   end
@@ -786,6 +1438,7 @@ local function createMinimapButton()
     GameTooltip:AddLine("UltimateHardcoreChallengeUI", 1, 1, 1)
     GameTooltip:AddLine("Left-click: Toggle window", 0.9, 0.9, 0.9)
     GameTooltip:AddLine("Drag: Move icon", 0.9, 0.9, 0.9)
+    GameTooltip:AddLine("/uhcc reset — clear this character's options", 0.75, 0.75, 0.75)
     GameTooltip:Show()
   end)
   btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -818,12 +1471,79 @@ end
 -- Events
 -- =========================
 
+StaticPopupDialogs["UHCC_WELCOME"] = {
+  text = "|cffffcc00Ultimate Hardcore Challenge|r\n\n|cffffcc00Ultimate Hardcore|r mode is |cff00ff00enabled|r for this character.\n\nUse the minimap button to choose your rules. Good luck!",
+  button1 = OKAY,
+  OnAccept = function() end,
+  timeout = 0,
+  whileDead = true,
+  interruptCinematic = false,
+  hideOnEscape = true,
+}
+
+StaticPopupDialogs["UHCC_NON_LEVEL1_ADVICE"] = {
+  text = "|cffffcc00UHCC|r — Recommendation\n\nYour character is not |cffffcc00level 1|r. For this challenge, it is strongly recommended to |cffffcc00start at level 1|r.\n\nWhen the option is available in the |cffffcc00Settings|r tab, you will need to |cffffcc00check|r the intended checkbox to avoid constant reminders.",
+  button1 = OKAY,
+  OnAccept = function()
+    ensureCharDB()
+    UHCC_CharDB._uhccNonLevel1AdviceSeen = true
+    C_Timer.After(0.2, uhccShowWelcomePopup)
+  end,
+  OnCancel = function()
+    ensureCharDB()
+    UHCC_CharDB._uhccNonLevel1AdviceSeen = true
+    C_Timer.After(0.2, uhccShowWelcomePopup)
+  end,
+  timeout = 0,
+  whileDead = true,
+  interruptCinematic = false,
+  hideOnEscape = true,
+}
+
+StaticPopupDialogs["UHCC_RESET_CHARACTER"] = {
+  text = "|cffffcc00UltimateHardcoreChallengeUI|r\n\nErase |cffffcc00all|r saved addon data for this character (options, welcome / level tips, flags)?\n\nLocked UI choices stay the same when you reopen the window.",
+  button1 = YES,
+  button2 = NO,
+  OnAccept = function()
+    resetCharChallengeData()
+  end,
+  timeout = 0,
+  whileDead = true,
+  interruptCinematic = false,
+  hideOnEscape = true,
+}
+
+local function slashTrim(s)
+  return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+local function slashUHCC(msg)
+  local m = string.lower(slashTrim(msg))
+  if m == "reset" then
+    StaticPopup_Show("UHCC_RESET_CHARACTER")
+  elseif m == "" then
+    print("|cffffcc00UHCC|r: |cff00ff00/uhcc reset|r — erase this character's saved options (confirmation).")
+  else
+    print("|cffffcc00UHCC|r: Unknown command. Use |cff00ff00/uhcc reset|r.")
+  end
+end
+
+SLASH_UHCC1 = "/uhcc"
+SLASH_UHCC2 = "/UHCC"
+SlashCmdList["UHCC"] = slashUHCC
+
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
-events:SetScript("OnEvent", function(_, event, name)
+events:SetScript("OnEvent", function(self, event, name)
   if event == "ADDON_LOADED" and name == ADDON_NAME then
     ensureDB()
+    ensureCharDB()
+    createUhccZoneRestrictionOverlay()
     createMainWindow()
     createMinimapButton()
+    self:RegisterEvent("PLAYER_ENTERING_WORLD")
+  elseif event == "PLAYER_ENTERING_WORLD" then
+    self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+    C_Timer.After(1.25, uhccScheduleOnboardingIfNeeded)
   end
 end)
