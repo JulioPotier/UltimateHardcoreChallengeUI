@@ -326,8 +326,18 @@ UHCC.OPTIONS = (function()
       inputType = "checkbox",
     },
     {
+      checkboxId = "SETTINGS-MONEYMGT",
+      label = "Money Management",
+      description = "When enabled, checking options doesn't purchase them immediately. Use the Purchase button to commit. Purchases increase your debt, which reduces your available gold for future purchases until you pay it to your bank character.",
+      cost = 0,
+      category = "settings",
+      term = "money_mgt",
+      tab = "settings",
+      inputType = "checkbox",
+    },
+    {
       checkboxId = "SETTINGS-BANKNAME",
-      label = "Bank name",
+      label = "Bank Name (required if Money Management is ON)",
       description = "Allowed mailbox recipient when Mail is locked (temporarily suppresses the warning if you mail to this name).",
       cost = 0,
       category = "settings",
@@ -337,10 +347,10 @@ UHCC.OPTIONS = (function()
     },
   }
 
-  -- Zones & Dungeons: one checkbox per map from UHCC.WORLD_ZONES; 3 gold each (UHCC cost unit: floor(cost/100) = gold).
+  -- Zones & Dungeons: one checkbox per map from UHCC.WORLD_ZONES; 1 gold each (UHCC cost unit: floor(cost/100) = gold).
   -- Per continent: zones section then Cities section; Azeroth CSV rows → Battlegrounds column only.
   do
-    local ZONE_OPTION_COST = 300
+    local ZONE_OPTION_COST = 100
     local buckets = {
       kalimdor_zones = {},
       kalimdor_cities = {},
@@ -454,7 +464,50 @@ local uhccOnboardingTimerScheduled = false
 
 local function ensureCharDB()
   if type(UHCC_CharDB) ~= "table" then UHCC_CharDB = {} end
-  if type(UHCC_CharDB.options) ~= "table" then UHCC_CharDB.options = {} end
+  -- Storage split:
+  -- - purchases: things the player "bought" (used by all restriction logic)
+  -- - settings: UI/settings toggles (Annoy me, Bank name, Money Management, etc.)
+  if type(UHCC_CharDB.purchases) ~= "table" then UHCC_CharDB.purchases = {} end
+  -- Purchases pending payment (Money Management ON): not effective until debt is paid.
+  if type(UHCC_CharDB.pendingPurchases) ~= "table" then UHCC_CharDB.pendingPurchases = {} end
+  if type(UHCC_CharDB.settings) ~= "table" then UHCC_CharDB.settings = {} end
+
+  -- Migration from older versions (everything lived in `UHCC_CharDB.options`).
+  if type(UHCC_CharDB.options) == "table" then
+    for _, opt in ipairs(UHCC.OPTIONS or {}) do
+      if opt and opt.checkboxId then
+        local v = UHCC_CharDB.options[opt.checkboxId]
+        if v ~= nil then
+          if opt.tab == "settings" then
+            if UHCC_CharDB.settings[opt.checkboxId] == nil then UHCC_CharDB.settings[opt.checkboxId] = v end
+          else
+            if UHCC_CharDB.purchases[opt.checkboxId] == nil then UHCC_CharDB.purchases[opt.checkboxId] = v end
+          end
+        end
+      end
+    end
+    -- Keep `options` around for backward compatibility, but stop using it.
+  end
+
+  if type(UHCC_CharDB.moneyDueCopper) ~= "number" then UHCC_CharDB.moneyDueCopper = 0 end
+
+  -- Money Management migration:
+  -- If there is outstanding debt, purchases must not be effective until paid.
+  -- Older sessions may have already written into `purchases`; move them to `pendingPurchases` once.
+  if UHCC_CharDB._uhccMoneyMgtPendingMigrationDone ~= true then
+    local mmOn = (type(UHCC_CharDB.settings) == "table") and (UHCC_CharDB.settings["SETTINGS-MONEYMGT"] == true)
+    local due = tonumber(UHCC_CharDB.moneyDueCopper) or 0
+    if mmOn and due > 0 then
+      for k, v in pairs(UHCC_CharDB.purchases or {}) do
+        if UHCC_CharDB.pendingPurchases[k] == nil then
+          UHCC_CharDB.pendingPurchases[k] = v
+        end
+      end
+      UHCC_CharDB.purchases = {}
+    end
+    UHCC_CharDB._uhccMoneyMgtPendingMigrationDone = true
+  end
+
   if UHCC_CharDB._uhccFirstAddonLoad == nil then
     UHCC_CharDB._uhccFirstAddonLoad = true
   end
@@ -475,7 +528,7 @@ local function uhccScheduleOnboardingIfNeeded()
   ensureCharDB()
   if UHCC_CharDB._uhccWelcomeSeen then return end
   local virginOptions = true
-  for _ in pairs(UHCC_CharDB.options) do
+  for _ in pairs(UHCC_CharDB.purchases) do
     virginOptions = false
     break
   end
@@ -506,6 +559,17 @@ local function optionLocksFreeChoice(opt)
   if not opt or opt.noFreeLock then return false end
   -- Starting zones must be free per-character to avoid immediate darkness overlay.
   if opt.tab == "zones_dungeons" and opt.inputType == "checkbox" then
+    -- Faction capital should also be free (locked).
+    local mid = tonumber(opt.term)
+    if mid then
+      local faction = (UnitFactionGroup and UnitFactionGroup("player")) or nil
+      if faction == "Alliance" and mid == 1453 then -- Stormwind City
+        return true
+      elseif faction == "Horde" and mid == 1454 then -- Orgrimmar
+        return true
+      end
+    end
+
     local raceName, raceFile, raceId = UnitRace and UnitRace("player")
     local rf = raceFile and string.lower(tostring(raceFile)) or nil
     local rn = raceName and string.lower(tostring(raceName)) or nil
@@ -547,8 +611,8 @@ local function optionLocksFreeChoice(opt)
       startMid = (rf and RACE_STARTING_ZONE_MAP_ID[rf]) or (rn and RACE_STARTING_ZONE_MAP_ID[rn]) or nil
     end
     if startMid then
-      local mid = tonumber(opt.term)
-      if mid and mid == startMid then
+      local mid2 = tonumber(opt.term)
+      if mid2 and mid2 == startMid then
         return true
       end
     end
@@ -634,9 +698,8 @@ local function pruneInvalidGearArmorSelections()
   for _, opt in ipairs(UHCC.OPTIONS) do
     if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
       -- Only prune if the player previously saved a selection.
-      -- Writing defaults here would make `options` non-empty and break "virgin" onboarding detection.
-      if UHCC_CharDB.options and UHCC_CharDB.options[opt.checkboxId] ~= nil then
-        UHCC_CharDB.options[opt.checkboxId] = false
+      if UHCC_CharDB.purchases and UHCC_CharDB.purchases[opt.checkboxId] ~= nil then
+        UHCC_CharDB.purchases[opt.checkboxId] = false
       end
     end
   end
@@ -646,9 +709,8 @@ local function pruneInvalidWeaponSelections()
   ensureCharDB()
   for _, opt in ipairs(UHCC.OPTIONS) do
     if isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term) then
-      -- Same onboarding constraint: don't write defaults into a virgin options table.
-      if UHCC_CharDB.options and UHCC_CharDB.options[opt.checkboxId] ~= nil then
-        UHCC_CharDB.options[opt.checkboxId] = false
+      if UHCC_CharDB.purchases and UHCC_CharDB.purchases[opt.checkboxId] ~= nil then
+        UHCC_CharDB.purchases[opt.checkboxId] = false
       end
     end
   end
@@ -725,7 +787,7 @@ local function getCharCheckboxState(opt)
   if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
     return false
   end
-  local v = UHCC_CharDB.options[opt.checkboxId]
+  local v = UHCC_CharDB.purchases[opt.checkboxId]
   if v == nil then return false end
   return not not v
 end
@@ -746,7 +808,35 @@ end
 
 local function uhccAnnoyEnabled()
   ensureCharDB()
-  return UHCC_CharDB.options and UHCC_CharDB.options["SETTINGS-ANNOY"] == true
+  return UHCC_CharDB.settings and UHCC_CharDB.settings["SETTINGS-ANNOY"] == true
+end
+
+local function uhccMoneyManagementEnabled()
+  ensureCharDB()
+  return UHCC_CharDB.settings and UHCC_CharDB.settings["SETTINGS-MONEYMGT"] == true
+end
+
+local function uhccGetMoneyDueCopper()
+  ensureCharDB()
+  return tonumber(UHCC_CharDB.moneyDueCopper) or 0
+end
+
+local function uhccSetMoneyDueCopper(v)
+  ensureCharDB()
+  v = tonumber(v) or 0
+  if v < 0 then v = 0 end
+  UHCC_CharDB.moneyDueCopper = v
+end
+
+local function uhccCommittedPurchasesView()
+  -- For UI/draft purposes: show paid purchases + pending purchases.
+  ensureCharDB()
+  local t = {}
+  for k, v in pairs(UHCC_CharDB.purchases) do t[k] = v end
+  for k, v in pairs(UHCC_CharDB.pendingPurchases) do
+    if t[k] == nil then t[k] = v end
+  end
+  return t
 end
 
 local function uhccIsOptionCheckedById(id)
@@ -764,7 +854,7 @@ end
 
 local function uhccGetBankNameSetting()
   ensureCharDB()
-  local v = UHCC_CharDB.options and UHCC_CharDB.options["SETTINGS-BANKNAME"]
+  local v = UHCC_CharDB.settings and UHCC_CharDB.settings["SETTINGS-BANKNAME"]
   return tostring(v or "")
 end
 
@@ -1324,6 +1414,8 @@ local uhccTradeWindowOpen = false
 local uhccMailboxOpen = false
 local uhccMailHooksInstalled = false
 local uhccMailRecipientHooksInstalled = false
+local uhccLastSendMailRecipient = nil
+local uhccLastSendMailMoneyCopper = 0
 
 local function uhccInstallMailFrameHooks()
   if uhccMailHooksInstalled then return end
@@ -1351,6 +1443,32 @@ local function uhccInstallMailRecipientHooks()
       uhccUpdateEquipViolationOverlay()
     end
   end)
+
+  -- Capture outgoing mail payment details before Blizzard clears fields.
+  if _G.SendMailMailButton and _G.SendMailMailButton.HookScript then
+    _G.SendMailMailButton:HookScript("OnClick", function()
+      local recip = nil
+      if _G.SendMailNameEditBox and _G.SendMailNameEditBox.GetText then
+        recip = _G.SendMailNameEditBox:GetText()
+      end
+      uhccLastSendMailRecipient = recip
+
+      local m = 0
+      if GetSendMailMoney then
+        m = tonumber(GetSendMailMoney()) or 0
+      else
+        -- Fallback: read from money input boxes if present.
+        local g = tonumber((_G.SendMailMoneyGold and _G.SendMailMoneyGold.GetText and _G.SendMailMoneyGold:GetText()) or 0) or 0
+        local s = tonumber((_G.SendMailMoneySilver and _G.SendMailMoneySilver.GetText and _G.SendMailMoneySilver:GetText()) or 0) or 0
+        local c = tonumber((_G.SendMailMoneyCopper and _G.SendMailMoneyCopper.GetText and _G.SendMailMoneyCopper:GetText()) or 0) or 0
+        if g < 0 then g = 0 end
+        if s < 0 then s = 0 end
+        if c < 0 then c = 0 end
+        m = g * 10000 + s * 100 + c
+      end
+      uhccLastSendMailMoneyCopper = m
+    end)
+  end
 end
 
 local function uhccEnsureMailHooksInstalled()
@@ -2032,13 +2150,13 @@ local function computeTotalSpentCopperFromCharDB()
         if not optionLocksFreeChoice(opt) then
           if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
             -- cannot equip: never counts toward Spent
-          elseif UHCC_CharDB.options[opt.checkboxId] then
+          elseif UHCC_CharDB.purchases[opt.checkboxId] then
             total = total + uhccCostToCopper(opt.cost)
           end
         end
       elseif opt.inputType == "range" then
         local mn, mx = opt.min or 0, opt.max or 100
-        local v = tonumber(UHCC_CharDB.options[opt.checkboxId])
+        local v = tonumber(UHCC_CharDB.purchases[opt.checkboxId])
         if v == nil then v = mn end
         v = clamp(math.floor(v + 0.5), mn, mx)
         local per = tonumber(opt.cost) or 0
@@ -2047,6 +2165,40 @@ local function computeTotalSpentCopperFromCharDB()
     end
   end
   return total
+end
+
+local function uhccComputeAdditionalCostCopperForDraft(draft, purchases)
+  local add = 0
+  draft = (type(draft) == "table") and draft or {}
+  purchases = (type(purchases) == "table") and purchases or {}
+  for _, opt in ipairs(UHCC.OPTIONS) do
+    if opt and opt.tab ~= "settings" and not optionLocksFreeChoice(opt) then
+      if opt.inputType == "checkbox" then
+        local was = purchases[opt.checkboxId] and true or false
+        local now = draft[opt.checkboxId] and true or false
+        if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
+          -- cannot equip: never counts
+        elseif isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term) then
+          -- cannot use: never counts
+        elseif (not was) and now then
+          add = add + uhccCostToCopper(opt.cost)
+        end
+      elseif opt.inputType == "range" then
+        local mn, mx = opt.min or 0, opt.max or 100
+        local wasV = tonumber(purchases[opt.checkboxId])
+        if wasV == nil then wasV = mn end
+        wasV = clamp(math.floor(wasV + 0.5), mn, mx)
+        local nowV = tonumber(draft[opt.checkboxId])
+        if nowV == nil then nowV = wasV end
+        nowV = clamp(math.floor(nowV + 0.5), mn, mx)
+        if nowV > wasV then
+          local per = tonumber(opt.cost) or 0
+          add = add + uhccCostToCopper(per * (nowV - wasV))
+        end
+      end
+    end
+  end
+  return add
 end
 
 -- Zone restriction overlay: unpurchased zone → dark screen (mouse passes through).
@@ -2299,7 +2451,10 @@ local function resetCharChallengeData()
   for k in pairs(UHCC_CharDB) do
     UHCC_CharDB[k] = nil
   end
-  UHCC_CharDB.options = {}
+  UHCC_CharDB.purchases = {}
+  UHCC_CharDB.settings = {}
+  UHCC_CharDB.pendingPurchases = {}
+  UHCC_CharDB.moneyDueCopper = 0
   uhccOnboardingTimerScheduled = false
   ensureCharDB()
   -- Make sure onboarding (welcome / level tip) can run again for this character.
@@ -2593,14 +2748,36 @@ local function buildTabPage(panel, tabName, spec)
     elseif item.kind == "checkbox" then
       local x, y = lineToPos(line)
       local cb = addCheckboxAt(child, x, y, item.text, item.opts)
+      cb.UHCC_baseText = item.text
       cb.UHCC_option = item.option
       cb.checkboxId = item.option and item.option.checkboxId or nil
       cb.cost = item.option and item.option.cost or nil
+      -- Register purchase checkboxes for Money Management dynamic enabling/disabling.
+      do
+        local mf = UHCC.mainFrame
+        if mf and cb.checkboxId and item.option and item.option.tab ~= "settings" then
+          mf.UHCC_purchaseControls = mf.UHCC_purchaseControls or {}
+          mf.UHCC_purchaseControls[cb.checkboxId] = cb
+        end
+      end
       if cb.checkboxId and cb:IsEnabled() then
         cb:HookScript("OnClick", function(self)
           ensureCharDB()
-          UHCC_CharDB.options[self.checkboxId] = self:GetChecked() and true or false
-          recalcSpentDisplay()
+          local checked = self:GetChecked() and true or false
+          local mf = UHCC.mainFrame
+          if uhccMoneyManagementEnabled() and mf then
+            -- Ensure we never fall back to direct persistence when MM is enabled.
+            if type(mf.UHCC_draftPurchases) ~= "table" then
+              mf.UHCC_draftPurchases = {}
+              local base = uhccCommittedPurchasesView()
+              for k, v in pairs(base) do mf.UHCC_draftPurchases[k] = v end
+            end
+            mf.UHCC_draftPurchases[self.checkboxId] = checked
+            if mf.UHCC_UpdateMoneyUI then mf:UHCC_UpdateMoneyUI() end
+          else
+            UHCC_CharDB.purchases[self.checkboxId] = checked
+            recalcSpentDisplay()
+          end
         end)
       end
       line = line + 1
@@ -2620,7 +2797,14 @@ local function buildTabPage(panel, tabName, spec)
       local startVal = item.min or 0
       if item.option and item.option.checkboxId then
         ensureCharDB()
-        local sv = tonumber(UHCC_CharDB.options[item.option.checkboxId])
+        local sv = nil
+        local mf = UHCC.mainFrame
+        if uhccMoneyManagementEnabled() and mf and type(mf.UHCC_draftPurchases) == "table" then
+          sv = tonumber(mf.UHCC_draftPurchases[item.option.checkboxId])
+        end
+        if sv == nil then
+          sv = tonumber(UHCC_CharDB.purchases[item.option.checkboxId])
+        end
         if sv ~= nil then
           startVal = clamp(math.floor(sv + 0.5), item.min, item.max)
         end
@@ -2644,8 +2828,19 @@ local function buildTabPage(panel, tabName, spec)
         if not slider.UHCC_readyForPersist then return end
         if item.option and item.option.checkboxId then
           ensureCharDB()
-          UHCC_CharDB.options[item.option.checkboxId] = iv
-          recalcSpentDisplay()
+          local mf = UHCC.mainFrame
+          if uhccMoneyManagementEnabled() and mf then
+            if type(mf.UHCC_draftPurchases) ~= "table" then
+              mf.UHCC_draftPurchases = {}
+              local base = uhccCommittedPurchasesView()
+              for k, v in pairs(base) do mf.UHCC_draftPurchases[k] = v end
+            end
+            mf.UHCC_draftPurchases[item.option.checkboxId] = iv
+            if mf.UHCC_UpdateMoneyUI then mf:UHCC_UpdateMoneyUI() end
+          else
+            UHCC_CharDB.purchases[item.option.checkboxId] = iv
+            recalcSpentDisplay()
+          end
         end
       end)
 
@@ -2691,7 +2886,8 @@ local function buildTabPage(panel, tabName, spec)
       local padX = 16
       local y = -settingsCursorY
       local cb = CreateFrame("CheckButton", nil, child, "UICheckButtonTemplate")
-      cb:SetPoint("TOPLEFT", child, "TOPLEFT", padX, y)
+      local indent = (item.opts and tonumber(item.opts.indent)) or 0
+      cb:SetPoint("TOPLEFT", child, "TOPLEFT", padX + indent, y)
       cb.Text:SetText(item.label)
       cb.Text:SetFontObject("GameFontNormalLarge")
       cb.Text:SetTextColor(1, 1, 1, 1)
@@ -2709,10 +2905,48 @@ local function buildTabPage(panel, tabName, spec)
       if cb.checkboxId and cb:IsEnabled() then
         cb:HookScript("OnClick", function(self)
           ensureCharDB()
-          UHCC_CharDB.options[self.checkboxId] = self:GetChecked() and true or false
+          UHCC_CharDB.settings[self.checkboxId] = self:GetChecked() and true or false
+          -- Money Management depends on Annoy me.
+          if self.checkboxId == "SETTINGS-ANNOY" and (not self:GetChecked()) then
+            UHCC_CharDB.settings["SETTINGS-MONEYMGT"] = false
+            local mf = UHCC.mainFrame
+            if mf and mf.UHCC_settingsControls and mf.UHCC_settingsControls["SETTINGS-MONEYMGT"] then
+              local mm = mf.UHCC_settingsControls["SETTINGS-MONEYMGT"]
+              mm:SetChecked(false)
+              mm:SetEnabled(false)
+              if mm.Text then mm.Text:SetTextColor(0.7, 0.7, 0.7, 1) end
+            end
+          end
+          -- If Money Management was toggled while the window is open, (re)initialize the draft state now.
+          if self.checkboxId == "SETTINGS-MONEYMGT" then
+            local mf = UHCC.mainFrame
+            if mf then
+              if self:GetChecked() then
+                mf.UHCC_draftPurchases = {}
+                local base = uhccCommittedPurchasesView()
+                for k, v in pairs(base) do mf.UHCC_draftPurchases[k] = v end
+              else
+                mf.UHCC_draftPurchases = nil
+              end
+            end
+          end
+          -- Keep Money UI in sync when toggling the mode.
+          do
+            local mf = UHCC.mainFrame
+            if mf and mf.UHCC_UpdateMoneyUI then mf:UHCC_UpdateMoneyUI() end
+          end
           -- Apply immediately (zone overlay, bag highlights + tooltips, equip flash).
           recalcSpentDisplay()
         end)
+      end
+
+      -- Register the checkbox so dependencies can update it live.
+      do
+        local mf = UHCC.mainFrame
+        if mf and cb.checkboxId then
+          mf.UHCC_settingsControls = mf.UHCC_settingsControls or {}
+          mf.UHCC_settingsControls[cb.checkboxId] = cb
+        end
       end
 
       local desc = child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -2742,7 +2976,7 @@ local function buildTabPage(panel, tabName, spec)
       eb:HookScript("OnEditFocusLost", function(self)
         if item.option and item.option.checkboxId then
           ensureCharDB()
-          UHCC_CharDB.options[item.option.checkboxId] = tostring(self:GetText() or "")
+          UHCC_CharDB.settings[item.option.checkboxId] = tostring(self:GetText() or "")
           recalcSpentDisplay()
         end
       end)
@@ -2788,6 +3022,11 @@ local function buildTabPage(panel, tabName, spec)
           else
             resetCharChallengeData()
           end
+        elseif item.action == "reset_debt" then
+          ensureCharDB()
+          UHCC_CharDB.moneyDueCopper = 0
+          print("|cffffcc00UHCC|r: Debt reset.")
+          recalcSpentDisplay()
         end
       end)
 
@@ -2926,19 +3165,34 @@ local function createMainWindow()
   local function buildSpecForTab(tabKey)
     if tabKey == "settings" then
       local spec = {}
+      ensureCharDB()
+      local annoyOn = (UHCC_CharDB.settings and UHCC_CharDB.settings["SETTINGS-ANNOY"]) and true or false
       for _, opt in ipairs(UHCC.OPTIONS) do
         if opt.tab == "settings" and opt.inputType == "checkbox" then
-          local annoyOn = uhccAnnoyEnabled()
+          ensureCharDB()
+          local cur = (UHCC_CharDB.settings and UHCC_CharDB.settings[opt.checkboxId]) and true or false
+          local disabled = false
+          local indent = nil
+          -- Money Management depends on Annoy me.
+          if opt.checkboxId == "SETTINGS-ANNOY" then
+            annoyOn = cur
+          elseif opt.checkboxId == "SETTINGS-MONEYMGT" then
+            indent = 18
+            if not annoyOn then
+              cur = false
+              disabled = true
+            end
+          end
           spec[#spec + 1] = {
             kind = "settings_checkbox",
             label = (opt.label or ""),
             description = opt.description or "",
-            opts = { checked = annoyOn, disabled = false },
+            opts = { checked = cur, disabled = disabled, indent = indent },
             option = opt,
           }
         elseif opt.tab == "settings" and opt.inputType == "text" then
           ensureCharDB()
-          local v = UHCC_CharDB.options[opt.checkboxId]
+          local v = (UHCC_CharDB.settings and UHCC_CharDB.settings[opt.checkboxId]) or nil
           if v == nil then v = "" end
           spec[#spec + 1] = {
             kind = "settings_text",
@@ -2959,6 +3213,11 @@ local function createMainWindow()
         label = "Reset",
         action = "reset_character",
       }
+      spec[#spec + 1] = {
+        kind = "settings_button",
+        label = "Reset Debt",
+        action = "reset_debt",
+      }
       spec[#spec + 1] = { kind = "spacer" }
       spec[#spec + 1] = {
         kind = "settings_info",
@@ -2966,7 +3225,7 @@ local function createMainWindow()
       }
       spec[#spec + 1] = {
         kind = "settings_info",
-        text = "Tip me golds on |cffff69b4Kirbybank-Soulseeker|r ;)",
+        text = "Tip me golds on |cffff69b4Kirbank|r-Soulseeker ;)",
       }
       return spec
     end
@@ -3066,8 +3325,16 @@ local function createMainWindow()
               chkOpts = { checked = false, disabled = true }
             elseif optionLocksFreeChoice(opt) then
               chkOpts = { checked = true, disabled = true }
-            elseif getCharCheckboxState(opt) then
-              chkOpts = { checked = true }
+            else
+              -- UI check state: in Money Management mode, show draft (if any) instead of purchased.
+              local cur = nil
+              local mf = UHCC.mainFrame
+              if uhccMoneyManagementEnabled() and mf and type(mf.UHCC_draftPurchases) == "table" then
+                cur = mf.UHCC_draftPurchases[opt.checkboxId]
+              else
+                cur = getCharCheckboxState(opt)
+              end
+              if cur then chkOpts = { checked = true } end
             end
             spec[#spec + 1] = {
               kind = "checkbox",
@@ -3140,7 +3407,7 @@ local function createMainWindow()
 
   -- Spent counter (top-right)
   local spent = CreateFrame("Frame", nil, f)
-  spent:SetPoint("TOPRIGHT", f, "TOPRIGHT", -120, -34)
+  spent:SetPoint("TOPRIGHT", f, "TOPRIGHT", -120, -20)
   spent:SetSize(220, 20)
   f.spentFrame = spent
 
@@ -3164,12 +3431,177 @@ local function createMainWindow()
   end
   recalcSpentDisplay()
 
+  -- Money management UI (debt + cart + purchase button)
+  local debtLabel = spent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  debtLabel:SetPoint("TOPRIGHT", spentLabel, "BOTTOMRIGHT", 0, -2)
+  debtLabel:SetJustifyH("RIGHT")
+  debtLabel:SetText("Due:")
+  local debtValue = spent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  debtValue:SetPoint("LEFT", debtLabel, "RIGHT", 30, 0)
+  debtValue:SetJustifyH("LEFT")
+  debtValue:SetText("00 " .. goldIcon .. " 00 " .. silverIcon)
+  f.debtValueText = debtValue
+
+  local cartLabel = spent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  cartLabel:SetPoint("TOPRIGHT", debtLabel, "BOTTOMRIGHT", 0, -2)
+  cartLabel:SetJustifyH("RIGHT")
+  cartLabel:SetText("Cart:")
+  local cartValue = spent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  cartValue:SetPoint("LEFT", cartLabel, "RIGHT", 30, 0)
+  cartValue:SetJustifyH("LEFT")
+  cartValue:SetText("00 " .. goldIcon .. " 00 " .. silverIcon)
+  f.cartValueText = cartValue
+
+  function f:UHCC_UpdateMoneyUI()
+    ensureCharDB()
+    local mmOn = uhccMoneyManagementEnabled()
+    goldIcon, silverIcon = uhccMoneyDisplayTokens()
+    local due = uhccGetMoneyDueCopper()
+    local dg, ds = formatGoldSilverFromCopper(due)
+    debtValue:SetText(("%02d %s %02d %s"):format(dg, goldIcon, ds, silverIcon))
+
+    local availableAfterDebt = (GetMoney and GetMoney() or 0) - due
+    if availableAfterDebt < 0 then availableAfterDebt = 0 end
+
+    local add = 0
+    if mmOn and type(self.UHCC_draftPurchases) == "table" then
+      add = uhccComputeAdditionalCostCopperForDraft(self.UHCC_draftPurchases, uhccCommittedPurchasesView())
+    end
+    local cg, cs = formatGoldSilverFromCopper(add)
+    cartValue:SetText(("%02d %s %02d %s"):format(cg, goldIcon, cs, silverIcon))
+    if self.purchaseBtn then
+      if mmOn then self.purchaseBtn:Show() else self.purchaseBtn:Hide() end
+      self.purchaseBtn:SetEnabled(add > 0 and availableAfterDebt >= add)
+    end
+
+    -- Hide Due/Cart when Money Management is off.
+    if mmOn then
+      debtLabel:Show()
+      debtValue:Show()
+      cartLabel:Show()
+      cartValue:Show()
+    else
+      debtLabel:Hide()
+      debtValue:Hide()
+      cartLabel:Hide()
+      cartValue:Hide()
+    end
+
+    -- While Money Management is ON, disable unaffordable (not-yet-selected) checkboxes live.
+    if type(self.UHCC_purchaseControls) == "table" then
+      local remaining = availableAfterDebt - add
+      if remaining < 0 then remaining = 0 end
+
+      for id, cb in pairs(self.UHCC_purchaseControls) do
+        local opt = id and UHCC_OPTION_BY_ID[id] or nil
+        if cb and cb.IsEnabled and cb.SetEnabled and opt and opt.tab ~= "settings" then
+          local forcedFree = optionLocksFreeChoice(opt)
+          local deniedSF = uhccOptionDeniedInSelfFound(opt)
+          local deniedArmor = isGearArmorTierOption(opt) and (not playerCanUseGearArmorTerm(opt.term))
+          local deniedWeapon = isWeaponPurchaseOption(opt) and (not playerCanUseWeaponTerm(opt.term))
+
+          local purchased = (UHCC_CharDB.purchases and UHCC_CharDB.purchases[id]) and true or false
+          local pending = (UHCC_CharDB.pendingPurchases and UHCC_CharDB.pendingPurchases[id]) and true or false
+          local cur = (mmOn and type(self.UHCC_draftPurchases) == "table") and self.UHCC_draftPurchases[id] or nil
+          local checked = (cur ~= nil) and (cur and true or false) or purchased or pending
+
+          -- Label suffix: show "Paid" for locked paid purchases while Money Management is ON.
+          if cb.UHCC_baseText and cb.Text and cb.Text.SetText then
+            if mmOn and purchased then
+              cb.Text:SetText(cb.UHCC_baseText .. " - Paid")
+            else
+              cb.Text:SetText(cb.UHCC_baseText)
+            end
+          end
+
+          local canToggle = true
+          if forcedFree or deniedSF or deniedArmor or deniedWeapon then
+            canToggle = false
+          elseif mmOn and purchased then
+            -- Paid purchases are locked while Money Management is enabled.
+            canToggle = false
+          elseif checked then
+            -- Allow unchecking (except paid-lock case above) to reduce cart.
+            canToggle = true
+          elseif mmOn then
+            -- Only allow checking if affordable with remaining.
+            local price = uhccCostToCopper((opt and opt.cost) or 0)
+            if price > remaining then
+              canToggle = false
+            end
+          else
+            -- Money Management off: normal behavior (toggle allowed).
+            canToggle = true
+          end
+
+          cb:SetEnabled(canToggle)
+          if cb.Text and cb.Text.SetTextColor then
+            if canToggle then
+              cb.Text:SetTextColor(1, 1, 1, 1)
+            else
+              cb.Text:SetTextColor(0.7, 0.7, 0.7, 1)
+            end
+          end
+        end
+      end
+    end
+  end
+
+  f:HookScript("OnShow", function(self)
+    ensureCharDB()
+    if uhccMoneyManagementEnabled() then
+      self.UHCC_draftPurchases = {}
+      local base = uhccCommittedPurchasesView()
+      for k, v in pairs(base) do
+        self.UHCC_draftPurchases[k] = v
+      end
+    else
+      self.UHCC_draftPurchases = nil
+    end
+    if self.UHCC_UpdateMoneyUI then self:UHCC_UpdateMoneyUI() end
+  end)
+  f:HookScript("OnHide", function(self)
+    -- Closing discards draft changes.
+    self.UHCC_draftPurchases = nil
+  end)
+
   -- Close button (bottom-right)
   local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   closeBtn:SetSize(120, 26)
   closeBtn:SetPoint("BOTTOMRIGHT", -14, 14)
   closeBtn:SetText("Close")
   closeBtn:SetScript("OnClick", function() f:Hide() end)
+
+  local purchaseBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  purchaseBtn:SetSize(120, 26)
+  purchaseBtn:SetPoint("BOTTOMLEFT", 14, 14)
+  purchaseBtn:SetText("Purchase")
+  purchaseBtn:Hide()
+  f.purchaseBtn = purchaseBtn
+  purchaseBtn:SetScript("OnClick", function()
+    ensureCharDB()
+    if not uhccMoneyManagementEnabled() then return end
+    if type(f.UHCC_draftPurchases) ~= "table" then return end
+    local committed = uhccCommittedPurchasesView()
+    local add = uhccComputeAdditionalCostCopperForDraft(f.UHCC_draftPurchases, committed)
+    if add <= 0 then return end
+    local available = (GetMoney and GetMoney() or 0) - uhccGetMoneyDueCopper()
+    if available < add then
+      print("|cffffcc00UHCC|r: Not enough available gold (after debt). Pay your debt first.")
+      return
+    end
+    -- Commit draft → pending purchases (not effective until debt is paid).
+    for k, v in pairs(f.UHCC_draftPurchases) do
+      UHCC_CharDB.pendingPurchases[k] = v
+    end
+    uhccSetMoneyDueCopper(uhccGetMoneyDueCopper() + add)
+    -- Reset draft to committed state.
+    f.UHCC_draftPurchases = {}
+    local base = uhccCommittedPurchasesView()
+    for k, v in pairs(base) do f.UHCC_draftPurchases[k] = v end
+    recalcSpentDisplay()
+    if f.UHCC_UpdateMoneyUI then f:UHCC_UpdateMoneyUI() end
+  end)
 
   return f
 end
@@ -3420,6 +3852,7 @@ events:RegisterEvent("TRADE_CLOSED")
 events:RegisterEvent("SKILL_LINES_CHANGED")
 events:RegisterEvent("MAIL_SHOW")
 events:RegisterEvent("MAIL_CLOSED")
+events:RegisterEvent("MAIL_SEND_SUCCESS")
 events:RegisterEvent("TAXIMAP_OPENED")
 events:RegisterEvent("TAXIMAP_CLOSED")
 events:SetScript("OnEvent", function(self, event, name)
@@ -3457,6 +3890,9 @@ events:SetScript("OnEvent", function(self, event, name)
   elseif event == "BAG_UPDATE_DELAYED" then
     uhccEnsureBagHighlightHooksInstalled()
     uhccRefreshAllBagHighlights()
+    -- Some Classic builds don't reliably fire PLAYER_EQUIPMENT_CHANGED for bag slots.
+    -- BAG_UPDATE_DELAYED is a safe fallback to refresh equip violation warnings.
+    uhccUpdateEquipViolationOverlay()
   elseif event == "GET_ITEM_INFO_RECEIVED" then
     uhccEnsureBagHighlightHooksInstalled()
     uhccRefreshAllBagHighlights()
@@ -3533,6 +3969,46 @@ events:SetScript("OnEvent", function(self, event, name)
   elseif event == "MAIL_CLOSED" then
     uhccMailboxOpen = false
     uhccUpdateEquipViolationOverlay()
+  elseif event == "MAIL_SEND_SUCCESS" then
+    -- Money Management payment: if player sends gold to the configured bank character, reduce debt.
+    ensureCharDB()
+    if not uhccMoneyManagementEnabled() then return end
+    local bankName = uhccNormalizeNameForCompare(uhccGetBankNameSetting())
+    if bankName == "" then return end
+
+    local sentRecipient = uhccLastSendMailRecipient
+    if sentRecipient == nil and SendMailNameEditBox and SendMailNameEditBox.GetText then
+      sentRecipient = SendMailNameEditBox:GetText()
+    end
+    local rlow = uhccNormalizeNameForCompare(sentRecipient)
+    if rlow ~= bankName then return end
+
+    local money = tonumber(uhccLastSendMailMoneyCopper) or 0
+    if money <= 0 and GetSendMailMoney then
+      money = tonumber(GetSendMailMoney()) or 0
+    end
+    if money > 0 then
+      local due = uhccGetMoneyDueCopper()
+      uhccSetMoneyDueCopper(due - money)
+      if uhccGetMoneyDueCopper() <= 0 then
+        -- Debt fully paid: activate pending purchases.
+        for k, v in pairs(UHCC_CharDB.pendingPurchases or {}) do
+          UHCC_CharDB.purchases[k] = v
+        end
+        UHCC_CharDB.pendingPurchases = {}
+      end
+      if UHCC.mainFrame and UHCC.mainFrame.UHCC_UpdateMoneyUI then
+        UHCC.mainFrame:UHCC_UpdateMoneyUI()
+      end
+      recalcSpentDisplay()
+    end
+
+    -- If mailbox is still locked, restore the bank recipient immediately to avoid warnings.
+    if uhccAnnoyEnabled() and (not uhccIsPurchasedById("SERVICE-MAIL")) then
+      if SendMailNameEditBox and SendMailNameEditBox.SetText then
+        SendMailNameEditBox:SetText(uhccGetBankNameSetting())
+      end
+    end
   elseif event == "TAXIMAP_OPENED" then
     uhccTaxiMapOpen = true
     uhccUpdateEquipViolationOverlay()
