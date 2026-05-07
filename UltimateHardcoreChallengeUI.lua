@@ -85,6 +85,36 @@ UHCC.WORLD_ZONES = {
 }
 
 -- Dungeon map IDs (used for Zones & Dungeons tab + zone restriction overlay).
+-- Minimum player levels to enter (Classic Era).
+UHCC.DUNGEON_MIN_LEVEL = {
+  [2437] = 10, -- Ragefire Chasm
+  [718] = 10, -- Wailing Caverns
+  [1581] = 10, -- The Deadmines
+  [209] = 14, -- Shadowfang Keep
+  [719] = 15, -- Blackfathom Deeps
+  [717] = 15, -- The Stockade
+  [721] = 19, -- Gnomeregan
+  [491] = 25, -- Razorfen Kraul
+  [796] = 21, -- Scarlet Monastery
+  [722] = 35, -- Razorfen Downs
+  [1337] = 30, -- Uldaman
+  [1176] = 39, -- Zul'Farrak
+  [2100] = 30, -- Maraudon
+  [1477] = 45, -- The Temple of Atal'Hakkar
+  [1584] = 48, -- Blackrock Depths
+  [1583] = 48, -- Blackrock Spire
+  [2557] = 48, -- Dire Maul
+  [2057] = 48, -- Scholomance
+  [2017] = 48, -- Stratholme
+}
+
+-- Battleground minimum player levels (Classic Era).
+UHCC.BATTLEGROUND_MIN_LEVEL = {
+  [1460] = 10, -- Warsong Gulch
+  [1461] = 20, -- Arathi Basin
+  [1459] = 51, -- Alterac Valley
+}
+
 UHCC.DUNGEONS = {
   { 2437, "Ragefire Chasm" },
   { 718, "Wailing Caverns" },
@@ -372,6 +402,17 @@ UHCC.OPTIONS = (function()
         b[#b + 1] = row
       end
     end
+
+    -- Battleground ordering (requested): WSG, AB, AV.
+    do
+      local order = { [1460] = 1, [1461] = 2, [1459] = 3 }
+      table.sort(buckets.battlegrounds, function(a, b)
+        local ao = order[tonumber(a and a[1])] or 999
+        local bo = order[tonumber(b and b[1])] or 999
+        if ao ~= bo then return ao < bo end
+        return tostring(a and a[2] or "") < tostring(b and b[2] or "")
+      end)
+    end
     local emitOrder = {
       "kalimdor_zones",
       "kalimdor_cities",
@@ -381,6 +422,8 @@ UHCC.OPTIONS = (function()
     }
     for _, catKey in ipairs(emitOrder) do
       for _, row in ipairs(buckets[catKey]) do
+        local mid = tonumber(row[1])
+        local minLvl = (catKey == "battlegrounds" and mid and UHCC.BATTLEGROUND_MIN_LEVEL and UHCC.BATTLEGROUND_MIN_LEVEL[mid]) or nil
         t[#t + 1] = {
           checkboxId = ("ZONE-%d"):format(row[1]),
           label = row[2],
@@ -389,6 +432,7 @@ UHCC.OPTIONS = (function()
           term = tostring(row[1]),
           tab = "zones_dungeons",
           inputType = "checkbox",
+          minPlayerLevel = minLvl,
         }
       end
     end
@@ -403,6 +447,7 @@ UHCC.OPTIONS = (function()
         term = tostring(d[1]),
         tab = "zones_dungeons",
         inputType = "checkbox",
+        minPlayerLevel = (UHCC.DUNGEON_MIN_LEVEL and UHCC.DUNGEON_MIN_LEVEL[d[1]]) or nil,
       }
     end
   end
@@ -2766,6 +2811,15 @@ local function buildTabPage(panel, tabName, spec)
           local checked = self:GetChecked() and true or false
           local mf = UHCC.mainFrame
           if uhccMoneyManagementEnabled() and mf then
+            -- Money Management: allow cancelling already-committed due (pending) purchases with confirmation.
+            if (not checked) and UHCC_CharDB.pendingPurchases and UHCC_CharDB.pendingPurchases[self.checkboxId] then
+              -- Revert the visual toggle immediately; the popup will apply the change on accept.
+              self:SetChecked(true)
+              if StaticPopup_Show and self.UHCC_option and self.UHCC_option.label then
+                StaticPopup_Show("UHCC_CANCEL_DUE_PURCHASE", self.UHCC_option.label, nil, { checkbox = self, option = self.UHCC_option })
+              end
+              return
+            end
             -- Ensure we never fall back to direct persistence when MM is enabled.
             if type(mf.UHCC_draftPurchases) ~= "table" then
               mf.UHCC_draftPurchases = {}
@@ -2919,6 +2973,21 @@ local function buildTabPage(panel, tabName, spec)
           end
           -- If Money Management was toggled while the window is open, (re)initialize the draft state now.
           if self.checkboxId == "SETTINGS-MONEYMGT" then
+            -- Bank Name is required: allow checking first, but prompt/focus immediately.
+            if self:GetChecked() then
+              local bn = uhccNormalizeNameForCompare(uhccGetBankNameSetting())
+              if bn == "" then
+                print("|cffffcc00UHCC|r: Please fill in Bank Name to enable Money Management.")
+                local mf2 = UHCC.mainFrame
+                if mf2 and mf2.UHCC_settingsControls and mf2.UHCC_settingsControls["SETTINGS-BANKNAME"] then
+                  local eb = mf2.UHCC_settingsControls["SETTINGS-BANKNAME"]
+                  if eb and eb.SetFocus then
+                    eb:SetFocus()
+                    eb:HighlightText()
+                  end
+                end
+              end
+            end
             local mf = UHCC.mainFrame
             if mf then
               if self:GetChecked() then
@@ -2993,6 +3062,15 @@ local function buildTabPage(panel, tabName, spec)
 
       local descH = desc:GetStringHeight() or 0
       settingsCursorY = settingsCursorY + 26 + 20 + 6 + 6 + math.max(descH, 14) + 18
+
+      -- Register the editbox so validations can focus it, etc.
+      do
+        local mf = UHCC.mainFrame
+        if mf and item.option and item.option.checkboxId then
+          mf.UHCC_settingsControls = mf.UHCC_settingsControls or {}
+          mf.UHCC_settingsControls[item.option.checkboxId] = eb
+        end
+      end
     elseif item.kind == "settings_info" then
       local padX = 16
       local y = -settingsCursorY
@@ -3074,11 +3152,23 @@ local function applyCustomTabLook(tab, selected)
   fs:SetWidth(0)
   fs:SetNonSpaceWrap(false)
   if selected then
-    bg:SetColorTexture(0.42, 0.34, 0.14, 1)
+    if bg.SetTexture then
+      bg:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ActiveTab")
+      -- Flip vertically so the tab looks anchored at the bottom.
+      bg:SetTexCoord(0, 1, 1, 0)
+    else
+      bg:SetColorTexture(0.42, 0.34, 0.14, 1)
+    end
     fs:SetFontObject(GameFontHighlightSmall)
     fs:SetTextColor(1, 1, 0.85, 1)
   else
-    bg:SetColorTexture(0.12, 0.12, 0.12, 0.98)
+    if bg.SetTexture then
+      bg:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-InActiveTab")
+      -- Flip vertically so the tab looks anchored at the bottom.
+      bg:SetTexCoord(0, 1, 1, 0)
+    else
+      bg:SetColorTexture(0.12, 0.12, 0.12, 0.98)
+    end
     fs:SetFontObject(GameFontNormalSmall)
     fs:SetTextColor(0.82, 0.82, 0.82, 1)
   end
@@ -3287,14 +3377,15 @@ local function createMainWindow()
       if opt.tab == tabKey then
         local skip = false
         -- Faction-specific dungeon display:
-        -- Horde shows Ragefire Chasm; Alliance shows The Stockade (only this difference).
+        -- Faction-specific dungeon display:
+        -- Horde shows Ragefire Chasm + Wailing Caverns; Alliance shows The Stockade.
         if tabKey == "zones_dungeons" and opt.category == "dungeons" then
           local faction = (UnitFactionGroup and UnitFactionGroup("player")) or nil
           local mid = tonumber(opt.term)
           if faction == "Horde" and mid == 717 then
             skip = true -- hide Stockade for Horde
-          elseif faction == "Alliance" and mid == 2437 then
-            skip = true -- hide Ragefire for Alliance
+          elseif faction == "Alliance" and (mid == 2437 or mid == 718) then
+            skip = true -- hide Ragefire + Wailing Caverns for Alliance
           end
         end
 
@@ -3313,6 +3404,12 @@ local function createMainWindow()
 
           if opt.inputType == "checkbox" then
             local text = opt.label .. formatCostSilver(uhccGetDisplayCostForOption(opt))
+            local plvl = (UnitLevel and UnitLevel("player")) or 0
+            local reqLvl = tonumber(opt.minPlayerLevel) or 0
+            local lowLvl = ((opt.category == "dungeons") or (opt.category == "battlegrounds")) and reqLvl > 0 and plvl < reqLvl
+            if lowLvl then
+              text = text .. (" - lvl %d"):format(reqLvl)
+            end
             local armorDenied = isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term)
             local weaponDenied = isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term)
             local selfFoundDenied = uhccOptionDeniedInSelfFound(opt)
@@ -3333,8 +3430,20 @@ local function createMainWindow()
                 cur = mf.UHCC_draftPurchases[opt.checkboxId]
               else
                 cur = getCharCheckboxState(opt)
+                -- When Money Management is ON but the frame isn't shown yet (no draft),
+                -- reflect pending (due) purchases in the UI so they stay checked after /reload.
+                if (not cur) and uhccMoneyManagementEnabled() then
+                  ensureCharDB()
+                  if UHCC_CharDB.pendingPurchases and UHCC_CharDB.pendingPurchases[opt.checkboxId] then
+                    cur = true
+                  end
+                end
               end
               if cur then chkOpts = { checked = true } end
+              if lowLvl then
+                chkOpts = chkOpts or {}
+                chkOpts.disabled = true
+              end
             end
             spec[#spec + 1] = {
               kind = "checkbox",
@@ -3380,17 +3489,20 @@ local function createMainWindow()
 
     local bg = tab:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
+    -- Default textured tab background (overridden by applyCustomTabLook).
+    bg:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-InActiveTab")
+    bg:SetTexCoord(0, 1, 1, 0)
     tab.UHCC_bg = bg
 
+    -- No visible hover highlight (avoid the default larger-looking highlight, and avoid invalid nil arg).
     local hi = tab:CreateTexture(nil, "HIGHLIGHT")
     hi:SetAllPoints()
-    hi:SetColorTexture(1, 1, 1, 0.08)
-    hi:SetBlendMode("ADD")
+    hi:SetColorTexture(1, 1, 1, 0)
 
     tab:SetScript("OnClick", function(self) setTabSelected(self:GetID()) end)
 
     if i == 1 then
-      tab:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -30)
+      tab:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -36)
     else
       tab:SetPoint("LEFT", _G[("UHCC_MainFrameTab%d"):format(i - 1)], "RIGHT", 3, 0)
     end
@@ -3410,6 +3522,15 @@ local function createMainWindow()
   spent:SetPoint("TOPRIGHT", f, "TOPRIGHT", -120, -20)
   spent:SetSize(220, 20)
   f.spentFrame = spent
+  f.UHCC_spentAnchorX = -120
+  f.UHCC_spentAnchorY_mmOn = -20
+  f.UHCC_spentAnchorY_mmOff = -35 -- 15px lower when Money Management is disabled
+  function f:UHCC_UpdateSpentAnchor()
+    if not self.spentFrame then return end
+    local y = uhccMoneyManagementEnabled() and self.UHCC_spentAnchorY_mmOn or self.UHCC_spentAnchorY_mmOff
+    self.spentFrame:ClearAllPoints()
+    self.spentFrame:SetPoint("TOPRIGHT", self, "TOPRIGHT", self.UHCC_spentAnchorX or -120, y or -20)
+  end
 
   local goldIcon, silverIcon = uhccMoneyDisplayTokens()
 
@@ -3455,6 +3576,9 @@ local function createMainWindow()
   function f:UHCC_UpdateMoneyUI()
     ensureCharDB()
     local mmOn = uhccMoneyManagementEnabled()
+    if self.UHCC_UpdateSpentAnchor then self:UHCC_UpdateSpentAnchor() end
+    local faction = (UnitFactionGroup and UnitFactionGroup("player")) or nil
+    local skullIcon = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_8:14:14:0:0|t"
     goldIcon, silverIcon = uhccMoneyDisplayTokens()
     local due = uhccGetMoneyDueCopper()
     local dg, ds = formatGoldSilverFromCopper(due)
@@ -3499,23 +3623,50 @@ local function createMainWindow()
           local deniedSF = uhccOptionDeniedInSelfFound(opt)
           local deniedArmor = isGearArmorTierOption(opt) and (not playerCanUseGearArmorTerm(opt.term))
           local deniedWeapon = isWeaponPurchaseOption(opt) and (not playerCanUseWeaponTerm(opt.term))
+          local plvl = (UnitLevel and UnitLevel("player")) or 0
+          local reqLvl = tonumber(opt.minPlayerLevel) or 0
+          local lowLvl = ((opt.category == "dungeons") or (opt.category == "battlegrounds")) and reqLvl > 0 and plvl < reqLvl
 
           local purchased = (UHCC_CharDB.purchases and UHCC_CharDB.purchases[id]) and true or false
           local pending = (UHCC_CharDB.pendingPurchases and UHCC_CharDB.pendingPurchases[id]) and true or false
           local cur = (mmOn and type(self.UHCC_draftPurchases) == "table") and self.UHCC_draftPurchases[id] or nil
           local checked = (cur ~= nil) and (cur and true or false) or purchased or pending
 
-          -- Label suffix: show "Paid" for locked paid purchases while Money Management is ON.
-          if cb.UHCC_baseText and cb.Text and cb.Text.SetText then
+          -- Label text + suffixes (Paid/Pending/In Cart) + dungeon low-level marker.
+          if cb.Text and cb.Text.SetText and opt and opt.label then
+            local baseText = opt.label .. formatCostSilver(uhccGetDisplayCostForOption(opt))
+            if lowLvl then
+              baseText = baseText .. (" - lvl %d"):format(reqLvl)
+            end
+            -- Enemy capital marker (skull) for cities.
+            if opt.category == "kalimdor_cities" or opt.category == "ek_cities" then
+              local lab = uhccNormalizeNameForCompare(opt.label)
+              local enemy = false
+              if faction == "Alliance" then
+                enemy = (lab == "orgrimmar" or lab == "thunder bluff" or lab == "undercity")
+              elseif faction == "Horde" then
+                enemy = (lab == "stormwind city" or lab == "darnassus" or lab == "ironforge")
+              end
+              if enemy then
+                baseText = baseText .. " - " .. skullIcon
+              end
+            end
+            cb.UHCC_baseText = baseText
             if mmOn and purchased then
-              cb.Text:SetText(cb.UHCC_baseText .. " - Paid")
+              cb.Text:SetText(baseText .. " - Paid")
+            elseif mmOn and pending then
+              cb.Text:SetText(baseText .. " - Pending")
+            elseif mmOn and cur and (not purchased) and (not pending) then
+              cb.Text:SetText(baseText .. " - In Cart")
             else
-              cb.Text:SetText(cb.UHCC_baseText)
+              cb.Text:SetText(baseText)
             end
           end
 
           local canToggle = true
           if forcedFree or deniedSF or deniedArmor or deniedWeapon then
+            canToggle = false
+          elseif lowLvl then
             canToggle = false
           elseif mmOn and purchased then
             -- Paid purchases are locked while Money Management is enabled.
@@ -3563,6 +3714,22 @@ local function createMainWindow()
   f:HookScript("OnHide", function(self)
     -- Closing discards draft changes.
     self.UHCC_draftPurchases = nil
+    -- If Money Management is ON, Bank Name must be set. If not, force MM OFF on close.
+    do
+      ensureCharDB()
+      if uhccMoneyManagementEnabled() then
+        local bn = uhccNormalizeNameForCompare(uhccGetBankNameSetting())
+        if bn == "" then
+          UHCC_CharDB.settings["SETTINGS-MONEYMGT"] = false
+          if self.UHCC_settingsControls and self.UHCC_settingsControls["SETTINGS-MONEYMGT"] then
+            local mm = self.UHCC_settingsControls["SETTINGS-MONEYMGT"]
+            if mm and mm.SetChecked then mm:SetChecked(false) end
+          end
+          if self.UHCC_UpdateMoneyUI then self:UHCC_UpdateMoneyUI() end
+          print("|cffffcc00UHCC|r: Money Management was disabled because Bank Name is missing.")
+        end
+      end
+    end
   end)
 
   -- Close button (bottom-right)
@@ -3805,6 +3972,59 @@ StaticPopupDialogs["UHCC_RELOAD_UI"] = {
   hideOnEscape = true,
 }
 
+StaticPopupDialogs["UHCC_CANCEL_DUE_PURCHASE"] = {
+  text = "|cffffcc00UHCC|r\n\nAre you sure you want to cancel the due purchase of |cffffcc00%s|r?\n\nThis will remove it from your due cart and reduce your debt accordingly.",
+  button1 = YES,
+  button2 = NO,
+  OnShow = function(self)
+    -- Ensure this confirmation stays above the UHCC main window.
+    if self and self.SetFrameStrata then
+      self:SetFrameStrata("FULLSCREEN_DIALOG")
+    end
+    if self and self.SetFrameLevel then
+      self:SetFrameLevel(7000)
+    end
+    if self and self.Raise then
+      self:Raise()
+    end
+  end,
+  OnAccept = function(_, data)
+    ensureCharDB()
+    if type(data) ~= "table" then return end
+    local opt = data.option
+    local cb = data.checkbox
+    local id = opt and opt.checkboxId or (cb and cb.checkboxId) or nil
+    if not id or not UHCC_CharDB.pendingPurchases or not UHCC_CharDB.pendingPurchases[id] then return end
+
+    UHCC_CharDB.pendingPurchases[id] = nil
+    local costCopper = uhccCostToCopper(uhccGetDisplayCostForOption(opt))
+    uhccSetMoneyDueCopper(uhccGetMoneyDueCopper() - costCopper)
+
+    local mf = UHCC.mainFrame
+    if mf then
+      -- Reset draft to committed view (now without this pending item).
+      if uhccMoneyManagementEnabled() then
+        mf.UHCC_draftPurchases = {}
+        local base = uhccCommittedPurchasesView()
+        for k, v in pairs(base) do mf.UHCC_draftPurchases[k] = v end
+      end
+      if cb and cb.SetChecked then cb:SetChecked(false) end
+      if mf.UHCC_UpdateMoneyUI then mf:UHCC_UpdateMoneyUI() end
+    end
+    recalcSpentDisplay()
+  end,
+  OnCancel = function(_, data)
+    -- Restore the checkmark if user cancels.
+    if type(data) == "table" and data.checkbox and data.checkbox.SetChecked then
+      data.checkbox:SetChecked(true)
+    end
+  end,
+  timeout = 0,
+  whileDead = true,
+  interruptCinematic = false,
+  hideOnEscape = true,
+}
+
 local function slashTrim(s)
   return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
 end
@@ -3887,6 +4107,9 @@ events:SetScript("OnEvent", function(self, event, name)
     C_Timer.After(1.25, uhccScheduleOnboardingIfNeeded)
   elseif event == "PLAYER_LEVEL_UP" then
     uhccApplyLevelLocks()
+    if UHCC and UHCC.mainFrame and UHCC.mainFrame.UHCC_UpdateMoneyUI then
+      UHCC.mainFrame:UHCC_UpdateMoneyUI()
+    end
   elseif event == "BAG_UPDATE_DELAYED" then
     uhccEnsureBagHighlightHooksInstalled()
     uhccRefreshAllBagHighlights()
