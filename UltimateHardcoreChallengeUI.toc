@@ -6,5 +6,4 @@
 ## SavedVariables: UHCC_DB
 ## SavedVariablesPerCharacter: UHCC_CharDB
 
-Bindings.xml
 UltimateHardcoreChallengeUI.lua

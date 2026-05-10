@@ -147,7 +147,7 @@ UHCC.OPTIONS = (function()
       label = "Main Hand",
       cost = 0,
       isFree = true,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "mainhand",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -157,7 +157,7 @@ UHCC.OPTIONS = (function()
       label = "Off Hand",
       cost = 0,
       isFree = true,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "offhand",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -166,7 +166,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-SHIRT",
       label = "Shirt",
       cost = 20,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "shirt",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -175,7 +175,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-HANDS",
       label = "Hands",
       cost = 20,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "hands",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -184,7 +184,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-WRIST",
       label = "Wrist",
       cost = 20,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "wrist",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -193,7 +193,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-WAIST",
       label = "Waist",
       cost = 20,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "waist",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -202,7 +202,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-LEGS",
       label = "Legs",
       cost = 20,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "legs",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -211,7 +211,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-FEET",
       label = "Feet",
       cost = 20,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "feet",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -220,7 +220,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-CHEST",
       label = "Chest",
       cost = 20,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "chest",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -229,7 +229,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-RANGE",
       label = "Range weapon",
       cost = 20,
-      category = "equipment_slots",
+      category = "equipment_slots_a",
       term = "range_weapon",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -238,7 +238,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-BACK",
       label = "Back",
       cost = 100,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "back",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -247,7 +247,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-SHOULDER",
       label = "Shoulder",
       cost = 100,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "shoulder",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -256,7 +256,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-HEAD",
       label = "Head",
       cost = 100,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "head",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -265,7 +265,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-TABARD",
       label = "Tabard",
       cost = 100,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "tabard",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -274,7 +274,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-NECK",
       label = "Neck",
       cost = 500,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "neck",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -283,7 +283,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-FINGER1",
       label = "Finger 1",
       cost = 500,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "finger1",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -292,7 +292,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-FINGER2",
       label = "Finger 2",
       cost = 500,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "finger2",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -301,7 +301,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-TRINKET1",
       label = "Trinket 1",
       cost = 500,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "trinket1",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -310,7 +310,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-TRINKET2",
       label = "Trinket 2",
       cost = 500,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "trinket2",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -319,7 +319,7 @@ UHCC.OPTIONS = (function()
       checkboxId = "EQUIP-RELIC",
       label = "Relic",
       cost = 1000,
-      category = "equipment_slots",
+      category = "equipment_slots_b",
       term = "relic",
       tab = "gear_quality",
       inputType = "checkbox",
@@ -2818,7 +2818,7 @@ local function buildTabPage(panel, tabName, spec)
   local colX = { 8, 8 + colPitch, 8 + colPitch * 2 }
   local rowH = 24
   -- Zones tab: up to ~25 rows per continent in one column.
-  -- Equipment tab: raise maxRows so all character slots stay in the first column (Quality center, Quest right).
+  -- Equipment tab: slots in columns 1–2, Gear Quality + Quest Gear in column 3.
   local maxRows = (tabName == "Zones & Dungeons") and 30 or (tabName == "Equipment & Quality") and 32 or 15
   local maxCols = 3
   local blockGap = 12
@@ -3040,19 +3040,27 @@ local function buildTabPage(panel, tabName, spec)
       cb.checkboxId = item.option and item.option.checkboxId or nil
       cb.cost = item.option and item.option.cost or nil
 
-      if cb.checkboxId and cb:IsEnabled() then
+      -- Always hook settings checkboxes (they may be enabled/disabled dynamically).
+      if cb.checkboxId then
         cb:HookScript("OnClick", function(self)
           ensureCharDB()
           UHCC_CharDB.settings[self.checkboxId] = self:GetChecked() and true or false
           -- Money Management depends on Annoy me.
-          if self.checkboxId == "SETTINGS-ANNOY" and (not self:GetChecked()) then
-            UHCC_CharDB.settings["SETTINGS-MONEYMGT"] = false
+          if self.checkboxId == "SETTINGS-ANNOY" then
             local mf = UHCC.mainFrame
-            if mf and mf.UHCC_settingsControls and mf.UHCC_settingsControls["SETTINGS-MONEYMGT"] then
-              local mm = mf.UHCC_settingsControls["SETTINGS-MONEYMGT"]
-              mm:SetChecked(false)
-              mm:SetEnabled(false)
-              if mm.Text then mm.Text:SetTextColor(0.7, 0.7, 0.7, 1) end
+            local mm = (mf and mf.UHCC_settingsControls) and mf.UHCC_settingsControls["SETTINGS-MONEYMGT"] or nil
+            if not self:GetChecked() then
+              UHCC_CharDB.settings["SETTINGS-MONEYMGT"] = false
+              if mm then
+                mm:SetChecked(false)
+                mm:SetEnabled(false)
+                if mm.Text then mm.Text:SetTextColor(0.7, 0.7, 0.7, 1) end
+              end
+            else
+              if mm then
+                mm:SetEnabled(true)
+                if mm.Text then mm.Text:SetTextColor(1, 1, 1, 1) end
+              end
             end
           end
           -- If Money Management was toggled while the window is open, (re)initialize the draft state now.
@@ -3184,11 +3192,6 @@ local function buildTabPage(panel, tabName, spec)
           else
             resetCharChallengeData()
           end
-        elseif item.action == "reset_debt" then
-          ensureCharDB()
-          UHCC_CharDB.moneyDueCopper = 0
-          print("|cffffcc00UHCC|r: Debt reset.")
-          recalcSpentDisplay()
         end
       end)
 
@@ -3307,6 +3310,52 @@ local function createMainWindow()
 
   f.TitleText:SetText(("UltimateHardcoreChallengeUI v%s"):format(getAddonVersion()))
 
+  -- Top-left: round MiniMap-style ring; smaller spell icon centered in the ring opening.
+  -- MiniMap-TrackingBorder is asymmetrical (tracking tab), so icon + bg share a small nudge vs. texture center.
+  do
+    local pf = CreateFrame("Frame", "UHCC_MainFramePortrait", f)
+    pf:SetFrameLevel((f:GetFrameLevel() or 0) + 5)
+    local RING_SZ = 76
+    local ICON_SZ = 32
+    local BG_SZ = 64
+    -- Visually centers content in the circular part of the border (MiniMap ring tab skews the hole).
+    local HOLE_OX, HOLE_OY = -16, 16
+    pf:SetSize(RING_SZ, RING_SZ)
+    -- Whole portrait (ring + icon): nudge vs. frame corner — was (8,-8); 5px left + 5px up → (3,-3)
+    pf:SetPoint("TOPLEFT", f, "TOPLEFT", -18, 18)
+
+    local ring = pf:CreateTexture(nil, "OVERLAY")
+    ring:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    ring:SetSize(RING_SZ, RING_SZ)
+    ring:SetPoint("CENTER", pf, "CENTER", 0, 0)
+
+    local bg = pf:CreateTexture(nil, "BACKGROUND")
+    bg:SetTexture("Interface\\QUESTFRAME\\QuestPortraitBackground")
+    bg:SetSize(BG_SZ, BG_SZ)
+    bg:SetPoint("CENTER", pf, "CENTER", HOLE_OX, HOLE_OY)
+
+    local icon = pf:CreateTexture(nil, "ARTWORK")
+    icon:SetTexture("Interface\\ICONS\\Ability_Warrior_Rampage")
+    icon:SetSize(ICON_SZ, ICON_SZ)
+    icon:SetPoint("CENTER", pf, "CENTER", HOLE_OX, HOLE_OY)
+
+    -- Clip icon (and bg) to a circle — same mask as Blizzard character portraits when supported.
+    do
+      local maskPath = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask"
+      if pf.CreateMaskTexture and icon.AddMaskTexture then
+        local function applyRoundMask(target, sz)
+          local m = pf:CreateMaskTexture()
+          m:SetTexture(maskPath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+          m:SetSize(sz, sz)
+          m:SetPoint("CENTER", target, "CENTER", 0, 0)
+          target:AddMaskTexture(m)
+        end
+        pcall(applyRoundMask, icon, ICON_SZ)
+        pcall(applyRoundMask, bg, BG_SZ)
+      end
+    end
+  end
+
   -- Content inset
   local content = CreateFrame("Frame", nil, f, "InsetFrameTemplate3")
   content:SetPoint("TOPLEFT", 12, -60)
@@ -3386,19 +3435,14 @@ local function createMainWindow()
         label = "Reset",
         action = "reset_character",
       }
-      spec[#spec + 1] = {
-        kind = "settings_button",
-        label = "Reset Debt",
-        action = "reset_debt",
-      }
       spec[#spec + 1] = { kind = "spacer" }
       spec[#spec + 1] = {
         kind = "settings_info",
-        text = "Support: https://github.com/JulioPotier/UltimateHardcoreChallengeUI/issues",
+        text = "Support: |cff66ccffhttps://github.com/JulioPotier/UltimateHardcoreChallengeUI/issues|r",
       }
       spec[#spec + 1] = {
         kind = "settings_info",
-        text = "Tip me golds on |cffff69b4Kirbank|r-Soulseeker ;)",
+        text = "Tip me golds on |cffff69b4Kirbank-Soulseeker|r ;)",
       }
       return spec
     end
@@ -3409,13 +3453,14 @@ local function createMainWindow()
     local sectionColumns = nil
     if tabKey == "gear_quality" then
       sectionTitles = {
-        equipment_slots = "Character slots",
+        equipment_slots_a = "Character slots",
         gear_quality = "Gear Quality",
         gear_quest = "Quest Gear",
       }
       sectionColumns = {
-        equipment_slots = 0,
-        gear_quality = 1,
+        equipment_slots_a = 0,
+        equipment_slots_b = 1,
+        gear_quality = 2,
         gear_quest = 2,
       }
     elseif tabKey == "weapons_services" then
@@ -3468,7 +3513,7 @@ local function createMainWindow()
             skip = true -- hide Ragefire + Wailing Caverns for Alliance
           end
         end
-        if tabKey == "gear_quality" and opt.category == "equipment_slots" then
+        if tabKey == "gear_quality" and (opt.category == "equipment_slots_a" or opt.category == "equipment_slots_b") then
           if opt.checkboxId == "EQUIP-RELIC" and not uhccPlayerShowsRelicSlotOption() then skip = true end
           if opt.checkboxId == "EQUIP-RANGE" and not uhccPlayerShowsRangeWeaponSlotOption() then skip = true end
         end
@@ -3946,11 +3991,11 @@ local function createMinimapButton()
 
   btn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:AddLine("UltimateHardcoreChallengeUI", 1, 1, 1)
+    GameTooltip:AddLine("|cffffcc00UltimateHardcoreChallengeUI|r", 1, 1, 1)
     GameTooltip:AddLine("Left-click: Toggle window", 0.9, 0.9, 0.9)
     GameTooltip:AddLine("Drag: Move icon", 0.9, 0.9, 0.9)
-    GameTooltip:AddLine("/uhcc reset — clear this character's options", 0.75, 0.75, 0.75)
-    GameTooltip:Show()
+    GameTooltip:AddLine("Command: /uhcc", 0.75, 0.75, 0.75)
+     GameTooltip:Show()
   end)
   btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
