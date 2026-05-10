@@ -16,7 +16,7 @@ end
 local DEFAULTS = {
   minimap = {
     angle = 225, -- degrees
-    radius = 55, -- pixels from minimap center
+    radius = 80, -- pixels from minimap center (slightly further out to hug the minimap rim)
   },
 }
 
@@ -24,7 +24,7 @@ local DEFAULTS = {
 local MAIN_FRAME_WIDTH, MAIN_FRAME_HEIGHT = 900, 500
 
 UHCC.TABS = {
-  { tab = "gear_quality", label = "Gear & Quality" },
+  { tab = "gear_quality", label = "Equipment & Quality" },
   { tab = "weapons_services", label = "Weapons & Services" },
   { tab = "professions_talents", label = "Professions & Talents" },
   { tab = "zones_dungeons", label = "Zones & Dungeons" },
@@ -139,50 +139,188 @@ UHCC.DUNGEONS = {
 
 UHCC.OPTIONS = (function()
   local t = {
-    -- Gear & Quality
+    -- Character equipment slots: order = price (free → most expensive), then quality tiers.
+    -- Free: Main Hand, Off Hand | 20s: Shirt…Chest, Range weapon (if class can use ranged slot)
+    -- 1g: Back, Shoulder, Head, Tabard | 5g: Neck, fingers, trinkets | 10g: Relic
     {
-      checkboxId = "GEAR-NONE",
-      label = "Gear Tier 0 - No Gear",
+      checkboxId = "EQUIP-MAINHAND",
+      label = "Main Hand",
       cost = 0,
       isFree = true,
-      category = "gear_type",
-      term = "none",
+      category = "equipment_slots",
+      term = "mainhand",
       tab = "gear_quality",
       inputType = "checkbox",
     },
     {
-      checkboxId = "GEAR-CLOTH",
-      label = "Gear Tier 1 - Cloth Gear",
-      cost = 30,
-      category = "gear_type",
-      term = "cloth",
+      checkboxId = "EQUIP-OFFHAND",
+      label = "Off Hand",
+      cost = 0,
+      isFree = true,
+      category = "equipment_slots",
+      term = "offhand",
       tab = "gear_quality",
       inputType = "checkbox",
     },
     {
-      checkboxId = "GEAR-LEATHER",
-      label = "Gear Tier 2 - Leather Gear",
+      checkboxId = "EQUIP-SHIRT",
+      label = "Shirt",
+      cost = 20,
+      category = "equipment_slots",
+      term = "shirt",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-HANDS",
+      label = "Hands",
+      cost = 20,
+      category = "equipment_slots",
+      term = "hands",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-WRIST",
+      label = "Wrist",
+      cost = 20,
+      category = "equipment_slots",
+      term = "wrist",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-WAIST",
+      label = "Waist",
+      cost = 20,
+      category = "equipment_slots",
+      term = "waist",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-LEGS",
+      label = "Legs",
+      cost = 20,
+      category = "equipment_slots",
+      term = "legs",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-FEET",
+      label = "Feet",
+      cost = 20,
+      category = "equipment_slots",
+      term = "feet",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-CHEST",
+      label = "Chest",
+      cost = 20,
+      category = "equipment_slots",
+      term = "chest",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-RANGE",
+      label = "Range weapon",
+      cost = 20,
+      category = "equipment_slots",
+      term = "range_weapon",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-BACK",
+      label = "Back",
+      cost = 100,
+      category = "equipment_slots",
+      term = "back",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-SHOULDER",
+      label = "Shoulder",
+      cost = 100,
+      category = "equipment_slots",
+      term = "shoulder",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-HEAD",
+      label = "Head",
+      cost = 100,
+      category = "equipment_slots",
+      term = "head",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-TABARD",
+      label = "Tabard",
+      cost = 100,
+      category = "equipment_slots",
+      term = "tabard",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-NECK",
+      label = "Neck",
       cost = 500,
-      category = "gear_type",
-      term = "leather",
+      category = "equipment_slots",
+      term = "neck",
       tab = "gear_quality",
       inputType = "checkbox",
     },
     {
-      checkboxId = "GEAR-MAIL",
-      label = "Gear Tier 3 - Mail Gear",
-      cost = 2000,
-      category = "gear_type",
-      term = "mail",
+      checkboxId = "EQUIP-FINGER1",
+      label = "Finger 1",
+      cost = 500,
+      category = "equipment_slots",
+      term = "finger1",
       tab = "gear_quality",
       inputType = "checkbox",
     },
     {
-      checkboxId = "GEAR-PLATE",
-      label = "Gear Tier 4 - Plate Gear",
-      cost = 5000,
-      category = "gear_type",
-      term = "plate",
+      checkboxId = "EQUIP-FINGER2",
+      label = "Finger 2",
+      cost = 500,
+      category = "equipment_slots",
+      term = "finger2",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-TRINKET1",
+      label = "Trinket 1",
+      cost = 500,
+      category = "equipment_slots",
+      term = "trinket1",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-TRINKET2",
+      label = "Trinket 2",
+      cost = 500,
+      category = "equipment_slots",
+      term = "trinket2",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-RELIC",
+      label = "Relic",
+      cost = 1000,
+      category = "equipment_slots",
+      term = "relic",
       tab = "gear_quality",
       inputType = "checkbox",
     },
@@ -247,42 +385,6 @@ UHCC.OPTIONS = (function()
       cost = 20000,
       category = "gear_quality",
       term = "epic",
-      tab = "gear_quality",
-      inputType = "checkbox",
-    },
-    {
-      checkboxId = "GEAR-CLOAKS",
-      label = "Cloaks",
-      cost = 500,
-      category = "gear_slots",
-      term = "cloaks",
-      tab = "gear_quality",
-      inputType = "checkbox",
-    },
-    {
-      checkboxId = "GEAR-RINGS",
-      label = "Rings",
-      cost = 1000,
-      category = "gear_slots",
-      term = "rings",
-      tab = "gear_quality",
-      inputType = "checkbox",
-    },
-    {
-      checkboxId = "GEAR-NECKLACE",
-      label = "Necklace",
-      cost = 1000,
-      category = "gear_slots",
-      term = "necklace",
-      tab = "gear_quality",
-      inputType = "checkbox",
-    },
-    {
-      checkboxId = "GEAR-TRINKETS",
-      label = "Trinkets",
-      cost = 1000,
-      category = "gear_slots",
-      term = "trinkets",
       tab = "gear_quality",
       inputType = "checkbox",
     },
@@ -496,6 +598,10 @@ local function ensureDB()
 
   if type(UHCC_DB.minimap.angle) ~= "number" then UHCC_DB.minimap.angle = DEFAULTS.minimap.angle end
   if type(UHCC_DB.minimap.radius) ~= "number" then UHCC_DB.minimap.radius = DEFAULTS.minimap.radius end
+  -- Legacy default radius was inset; migrate old value once (users can drag back if they prefer).
+  if UHCC_DB.minimap.radius == 55 then
+    UHCC_DB.minimap.radius = DEFAULTS.minimap.radius
+  end
 
   UHCC_DB.minimap.radius = clamp(UHCC_DB.minimap.radius, 30, 110)
   UHCC_DB.minimap.angle = normalizeAngle(UHCC_DB.minimap.angle)
@@ -673,20 +779,6 @@ local function uhccGetDisplayCostForOption(opt)
   return (opt and opt.cost) or 0
 end
 
--- Armor weight tiers each class can equip (Classic Era). classFile = 2nd return of UnitClass("player").
-local CLASS_ARMOR_ALLOWED = {
-  WARRIOR = { cloth = true, leather = true, mail = true, plate = true },
-  PALADIN = { cloth = true, leather = true, mail = true, plate = true },
-  DEATHKNIGHT = { cloth = true, leather = true, mail = true, plate = true },
-  HUNTER = { cloth = true, leather = true, mail = true, plate = false },
-  ROGUE = { cloth = true, leather = true, mail = false, plate = false },
-  PRIEST = { cloth = true, leather = false, mail = false, plate = false },
-  SHAMAN = { cloth = true, leather = true, mail = true, plate = false },
-  MAGE = { cloth = true, leather = false, mail = false, plate = false },
-  WARLOCK = { cloth = true, leather = false, mail = false, plate = false },
-  DRUID = { cloth = true, leather = true, mail = false, plate = false },
-}
-
 -- Weapon types per class (Classic Era). We only care about the weapon "terms" we expose as purchases.
 -- Terms used by UHCC.OPTIONS (weapons): one_handed, two_handed, daggers, bows, guns, crossbows, throwing.
 local CLASS_WEAPON_ALLOWED = {
@@ -702,15 +794,6 @@ local CLASS_WEAPON_ALLOWED = {
   DRUID = { one_handed = true, two_handed = true, daggers = true, bows = false, guns = false, crossbows = false, throwing = false },
 }
 
-local function playerCanUseGearArmorTerm(term)
-  if term == "none" or term == nil or term == "" then return true end
-  local _, classFile = UnitClass("player")
-  if not classFile then return true end
-  local allowed = CLASS_ARMOR_ALLOWED[classFile]
-  if not allowed then return true end
-  return not not allowed[term]
-end
-
 local function playerCanUseWeaponTerm(term)
   if term == "none" or term == nil or term == "" then return true end
   local _, classFile = UnitClass("player")
@@ -720,13 +803,21 @@ local function playerCanUseWeaponTerm(term)
   return not not allowed[term]
 end
 
-local function isGearArmorTierOption(opt)
-  return opt
-    and opt.tab == "gear_quality"
-    and opt.category == "gear_type"
-    and opt.inputType == "checkbox"
-    and opt.term
-    and opt.term ~= "none"
+-- Relic-slot items (Classic Era librams / totems / idols): only relevant classes — hide UI for others.
+local function uhccPlayerShowsRelicSlotOption()
+  local _, cf = UnitClass("player")
+  if not cf then return false end
+  return cf == "PALADIN" or cf == "SHAMAN" or cf == "DRUID"
+end
+
+-- Ranged slot (~slot 18) for bows/guns/thrown/wands — matches weapon permissions + casters using wands.
+local function uhccPlayerShowsRangeWeaponSlotOption()
+  local _, cf = UnitClass("player")
+  if not cf then return false end
+  if cf == "PRIEST" or cf == "MAGE" or cf == "WARLOCK" or cf == "HUNTER" then return true end
+  local allowed = CLASS_WEAPON_ALLOWED[cf]
+  if allowed and (allowed.bows or allowed.guns or allowed.crossbows or allowed.throwing) then return true end
+  return false
 end
 
 local function isWeaponPurchaseOption(opt)
@@ -736,18 +827,6 @@ local function isWeaponPurchaseOption(opt)
     and opt.inputType == "checkbox"
     and opt.term
     and opt.term ~= "none"
-end
-
-local function pruneInvalidGearArmorSelections()
-  ensureCharDB()
-  for _, opt in ipairs(UHCC.OPTIONS) do
-    if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
-      -- Only prune if the player previously saved a selection.
-      if UHCC_CharDB.purchases and UHCC_CharDB.purchases[opt.checkboxId] ~= nil then
-        UHCC_CharDB.purchases[opt.checkboxId] = false
-      end
-    end
-  end
 end
 
 local function pruneInvalidWeaponSelections()
@@ -827,9 +906,6 @@ local function getCharCheckboxState(opt)
     return true
   end
   if uhccOptionDeniedInSelfFound(opt) then
-    return false
-  end
-  if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
     return false
   end
   local v = UHCC_CharDB.purchases[opt.checkboxId]
@@ -1204,6 +1280,50 @@ local function uhccNextMissingBagRankMessage(nextRank)
   return "Buy the next Bag slot first"
 end
 
+-- Character sheet slot purchases: all listed ids must be owned (rings/trinkets = both slots).
+local function uhccEquipSlotPurchasesMet(ids)
+  if not ids then return true end
+  for _, cid in ipairs(ids) do
+    if not uhccIsPurchasedById(cid) then return false end
+  end
+  return true
+end
+
+local function uhccEquipSlotPurchaseIdsForEquipLoc(equipLoc, itemClassID, itemSubClassID)
+  if not equipLoc or equipLoc == "" then return nil end
+  if equipLoc == "INVTYPE_HEAD" then return { "EQUIP-HEAD" } end
+  if equipLoc == "INVTYPE_NECK" then return { "EQUIP-NECK" } end
+  if equipLoc == "INVTYPE_SHOULDER" then return { "EQUIP-SHOULDER" } end
+  if equipLoc == "INVTYPE_BODY" then return { "EQUIP-SHIRT" } end
+  if equipLoc == "INVTYPE_CHEST" or equipLoc == "INVTYPE_ROBE" then return { "EQUIP-CHEST" } end
+  if equipLoc == "INVTYPE_WAIST" then return { "EQUIP-WAIST" } end
+  if equipLoc == "INVTYPE_LEGS" then return { "EQUIP-LEGS" } end
+  if equipLoc == "INVTYPE_FEET" then return { "EQUIP-FEET" } end
+  if equipLoc == "INVTYPE_WRIST" then return { "EQUIP-WRIST" } end
+  if equipLoc == "INVTYPE_HAND" then return { "EQUIP-HANDS" } end
+  if equipLoc == "INVTYPE_CLOAK" then return { "EQUIP-BACK" } end
+  if equipLoc == "INVTYPE_TABARD" then return { "EQUIP-TABARD" } end
+  if equipLoc == "INVTYPE_FINGER" then return { "EQUIP-FINGER1", "EQUIP-FINGER2" } end
+  if equipLoc == "INVTYPE_TRINKET" then return { "EQUIP-TRINKET1", "EQUIP-TRINKET2" } end
+  if equipLoc == "INVTYPE_WEAPONMAINHAND" or equipLoc == "INVTYPE_2HWEAPON" then return { "EQUIP-MAINHAND" } end
+  if equipLoc == "INVTYPE_WEAPONOFFHAND" or equipLoc == "INVTYPE_SHIELD" or equipLoc == "INVTYPE_HOLDABLE" then
+    return { "EQUIP-OFFHAND" }
+  end
+  -- Relic-slot items vs ranged weapons (bows, guns, thrown, wands share slot 18 in Classic).
+  itemClassID = tonumber(itemClassID)
+  itemSubClassID = tonumber(itemSubClassID)
+  local relicWeaponSc = tonumber(_G.LE_ITEM_WEAPON_RELIC)
+  local isWeaponRelic = (itemClassID == 2 and relicWeaponSc and itemSubClassID == relicWeaponSc)
+  if equipLoc == "INVTYPE_RELIC" or isWeaponRelic then
+    return { "EQUIP-RELIC" }
+  end
+  if equipLoc == "INVTYPE_RANGED" or equipLoc == "INVTYPE_RANGEDRIGHT" or equipLoc == "INVTYPE_THROWN" then
+    return { "EQUIP-RANGE" }
+  end
+  if equipLoc == "INVTYPE_WEAPON" then return { "EQUIP-MAINHAND" } end
+  return nil
+end
+
 local function uhccItemIsAllowedByPurchases(itemLink)
   if not itemLink or itemLink == "" then
     return true, nil
@@ -1251,6 +1371,9 @@ local function uhccItemIsAllowedByPurchases(itemLink)
       or equipLoc == "INVTYPE_WEAPONOFFHAND"
       or equipLoc == "INVTYPE_RANGED"
       or equipLoc == "INVTYPE_RANGEDRIGHT"
+      or equipLoc == "INVTYPE_RELIC"
+      or equipLoc == "INVTYPE_THROWN"
+      or equipLoc == "INVTYPE_HOLDABLE"
     then
       return true
     end
@@ -1296,15 +1419,6 @@ local function uhccItemIsAllowedByPurchases(itemLink)
     end
   end
 
-  local function armorWeightAllowedFromSubTypeString(subType)
-    if type(subType) ~= "string" or subType == "" then return nil end
-    if ITEM_SUBCLASS_ARMOR_CLOTH and subType == ITEM_SUBCLASS_ARMOR_CLOTH then return uhccIsPurchasedById("GEAR-CLOTH") end
-    if ITEM_SUBCLASS_ARMOR_LEATHER and subType == ITEM_SUBCLASS_ARMOR_LEATHER then return uhccIsPurchasedById("GEAR-LEATHER") end
-    if ITEM_SUBCLASS_ARMOR_MAIL and subType == ITEM_SUBCLASS_ARMOR_MAIL then return uhccIsPurchasedById("GEAR-MAIL") end
-    if ITEM_SUBCLASS_ARMOR_PLATE and subType == ITEM_SUBCLASS_ARMOR_PLATE then return uhccIsPurchasedById("GEAR-PLATE") end
-    return nil
-  end
-
   local function weaponAllowedFromSubTypeString(subType)
     if type(subType) ~= "string" or subType == "" then return nil end
     if ITEM_SUBCLASS_WEAPON_DAGGER and subType == ITEM_SUBCLASS_WEAPON_DAGGER then return uhccIsPurchasedById("WEAPON-DAGGERS") end
@@ -1341,46 +1455,17 @@ local function uhccItemIsAllowedByPurchases(itemLink)
     return false, reasons
   end
 
-  -- Accessories.
-  if equipLoc == "INVTYPE_CLOAK" then
-    if not uhccIsPurchasedById("GEAR-CLOAKS") then addReason("Buy Cloaks first") end
-    qualityCheck()
-    if #reasons == 0 then return true, nil end
-    return false, reasons
-  end
-  if equipLoc == "INVTYPE_NECK" then
-    if not uhccIsPurchasedById("GEAR-NECKLACE") then addReason("Buy Necklace first") end
-    qualityCheck()
-    if #reasons == 0 then return true, nil end
-    return false, reasons
-  end
-  if equipLoc == "INVTYPE_FINGER" then
-    if not uhccIsPurchasedById("GEAR-RINGS") then addReason("Buy Rings first") end
-    qualityCheck()
-    if #reasons == 0 then return true, nil end
-    return false, reasons
-  end
-  if equipLoc == "INVTYPE_TRINKET" then
-    if not uhccIsPurchasedById("GEAR-TRINKETS") then addReason("Buy Trinkets first") end
-    qualityCheck()
-    if #reasons == 0 then return true, nil end
-    return false, reasons
+  do
+    local slotIds = uhccEquipSlotPurchaseIdsForEquipLoc(equipLoc, classID, subclassID)
+    if slotIds and not uhccEquipSlotPurchasesMet(slotIds) then
+      addReason("Buy the matching character slot first")
+    end
   end
 
   -- Armor.
   if classID == 4 or itemType == (ITEM_CLASS_ARMOR or "Armor") then
-    if subclassID == 1 and not uhccIsPurchasedById("GEAR-CLOTH") then addReason("Buy Cloth gear first") end
-    if subclassID == 2 and not uhccIsPurchasedById("GEAR-LEATHER") then addReason("Buy Leather gear first") end
-    if subclassID == 3 and not uhccIsPurchasedById("GEAR-MAIL") then addReason("Buy Mail gear first") end
-    if subclassID == 4 and not uhccIsPurchasedById("GEAR-PLATE") then addReason("Buy Plate gear first") end
-
     if equipLoc == "INVTYPE_SHIELD" and not uhccIsPurchasedById("WEAPON-ONEHAND") then
       addReason("Buy One Handed Weapons first")
-    end
-
-    local ok = armorWeightAllowedFromSubTypeString(itemSubType)
-    if ok == false and #reasons == 0 then
-      addReason("Buy the required gear tier first")
     end
 
     qualityCheck()
@@ -1402,7 +1487,7 @@ local function uhccItemIsAllowedByPurchases(itemLink)
       addReason("Buy the required weapon type first")
     end
 
-    if equipLoc == "INVTYPE_2HWEAPON" or equipLoc == "INVTYPE_RANGED" or equipLoc == "INVTYPE_RANGEDRIGHT" then
+    if equipLoc == "INVTYPE_2HWEAPON" or equipLoc == "INVTYPE_RANGED" or equipLoc == "INVTYPE_RANGEDRIGHT" or equipLoc == "INVTYPE_THROWN" then
       if not uhccIsPurchasedById("WEAPON-TWOHAND") then addReason("Buy Two Handed Weapons first") end
     end
     if equipLoc == "INVTYPE_WEAPON" or equipLoc == "INVTYPE_WEAPONMAINHAND" or equipLoc == "INVTYPE_WEAPONOFFHAND" then
@@ -2193,9 +2278,7 @@ local function computeTotalSpentCopperFromCharDB()
     if opt.tab ~= "settings" then
       if opt.inputType == "checkbox" then
         if not optionLocksFreeChoice(opt) then
-          if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
-            -- cannot equip: never counts toward Spent
-          elseif UHCC_CharDB.purchases[opt.checkboxId] then
+          if UHCC_CharDB.purchases[opt.checkboxId] then
             total = total + uhccCostToCopper(opt.cost)
           end
         end
@@ -2221,9 +2304,7 @@ local function uhccComputeAdditionalCostCopperForDraft(draft, purchases)
       if opt.inputType == "checkbox" then
         local was = purchases[opt.checkboxId] and true or false
         local now = draft[opt.checkboxId] and true or false
-        if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
-          -- cannot equip: never counts
-        elseif isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term) then
+        if isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term) then
           -- cannot use: never counts
         elseif (not was) and now then
           add = add + uhccCostToCopper(opt.cost)
@@ -2736,8 +2817,9 @@ local function buildTabPage(panel, tabName, spec)
   local colPitch = math.floor((innerScrollW - 16) / 3)
   local colX = { 8, 8 + colPitch, 8 + colPitch * 2 }
   local rowH = 24
-  -- Zones tab: up to ~25 rows per continent in one column; default 15 is enough for other tabs.
-  local maxRows = (tabName == "Zones & Dungeons") and 30 or 15
+  -- Zones tab: up to ~25 rows per continent in one column.
+  -- Equipment tab: raise maxRows so all character slots stay in the first column (Quality center, Quest right).
+  local maxRows = (tabName == "Zones & Dungeons") and 30 or (tabName == "Equipment & Quality") and 32 or 15
   local maxCols = 3
   local blockGap = 12
 
@@ -2787,9 +2869,11 @@ local function buildTabPage(panel, tabName, spec)
       if item.column ~= nil then
         setColumnStart(item.column)
       end
-      local x, y = lineToPos(line)
-      addSectionTitleAt(child, x, y, item.text)
-      line = line + 1
+      if item.text and item.text ~= "" then
+        local x, y = lineToPos(line)
+        addSectionTitleAt(child, x, y, item.text)
+        line = line + 1
+      end
     elseif item.kind == "checkbox" then
       local x, y = lineToPos(line)
       local cb = addCheckboxAt(child, x, y, item.text, item.opts)
@@ -3196,7 +3280,6 @@ local function createMainWindow()
   if UHCC.mainFrame then return UHCC.mainFrame end
 
   ensureCharDB()
-  pruneInvalidGearArmorSelections()
   pruneInvalidWeaponSelections()
 
   local f = CreateFrame("Frame", "UHCC_MainFrame", UIParent, "BasicFrameTemplateWithInset")
@@ -3326,15 +3409,13 @@ local function createMainWindow()
     local sectionColumns = nil
     if tabKey == "gear_quality" then
       sectionTitles = {
-        gear_type = "Gear",
-        gear_quality = "Quality",
-        gear_slots = "Accessories",
+        equipment_slots = "Character slots",
+        gear_quality = "Gear Quality",
         gear_quest = "Quest Gear",
       }
-      sectionColumns = { -- // 0 to 2 max columns
-        gear_type = 0,
+      sectionColumns = {
+        equipment_slots = 0,
         gear_quality = 1,
-        gear_slots = 2,
         gear_quest = 2,
       }
     elseif tabKey == "weapons_services" then
@@ -3377,7 +3458,6 @@ local function createMainWindow()
       if opt.tab == tabKey then
         local skip = false
         -- Faction-specific dungeon display:
-        -- Faction-specific dungeon display:
         -- Horde shows Ragefire Chasm + Wailing Caverns; Alliance shows The Stockade.
         if tabKey == "zones_dungeons" and opt.category == "dungeons" then
           local faction = (UnitFactionGroup and UnitFactionGroup("player")) or nil
@@ -3388,15 +3468,21 @@ local function createMainWindow()
             skip = true -- hide Ragefire + Wailing Caverns for Alliance
           end
         end
+        if tabKey == "gear_quality" and opt.category == "equipment_slots" then
+          if opt.checkboxId == "EQUIP-RELIC" and not uhccPlayerShowsRelicSlotOption() then skip = true end
+          if opt.checkboxId == "EQUIP-RANGE" and not uhccPlayerShowsRangeWeaponSlotOption() then skip = true end
+        end
 
         if not skip then
-          if sectionTitles and sectionTitles[opt.category] and lastSection ~= opt.category then
-            if opt.inputType == "checkbox" or opt.inputType == "range" then
+          if lastSection ~= opt.category and (opt.inputType == "checkbox" or opt.inputType == "range") then
+            local col = sectionColumns and sectionColumns[opt.category]
+            local title = sectionTitles and sectionTitles[opt.category]
+            if col ~= nil or (title ~= nil and title ~= "") then
               if #spec > 0 then spec[#spec + 1] = { kind = "spacer" } end
               spec[#spec + 1] = {
                 kind = "section",
-                text = sectionTitles[opt.category],
-                column = sectionColumns and sectionColumns[opt.category] or nil,
+                text = title or "",
+                column = col,
               }
               lastSection = opt.category
             end
@@ -3410,13 +3496,10 @@ local function createMainWindow()
             if lowLvl then
               text = text .. (" - lvl %d"):format(reqLvl)
             end
-            local armorDenied = isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term)
             local weaponDenied = isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term)
             local selfFoundDenied = uhccOptionDeniedInSelfFound(opt)
             local chkOpts = nil
             if selfFoundDenied then
-              chkOpts = { checked = false, disabled = true }
-            elseif armorDenied then
               chkOpts = { checked = false, disabled = true }
             elseif weaponDenied then
               chkOpts = { checked = false, disabled = true }
@@ -3621,7 +3704,6 @@ local function createMainWindow()
         if cb and cb.IsEnabled and cb.SetEnabled and opt and opt.tab ~= "settings" then
           local forcedFree = optionLocksFreeChoice(opt)
           local deniedSF = uhccOptionDeniedInSelfFound(opt)
-          local deniedArmor = isGearArmorTierOption(opt) and (not playerCanUseGearArmorTerm(opt.term))
           local deniedWeapon = isWeaponPurchaseOption(opt) and (not playerCanUseWeaponTerm(opt.term))
           local plvl = (UnitLevel and UnitLevel("player")) or 0
           local reqLvl = tonumber(opt.minPlayerLevel) or 0
@@ -3664,7 +3746,7 @@ local function createMainWindow()
           end
 
           local canToggle = true
-          if forcedFree or deniedSF or deniedArmor or deniedWeapon then
+          if forcedFree or deniedSF or deniedWeapon then
             canToggle = false
           elseif lowLvl then
             canToggle = false
@@ -3816,16 +3898,11 @@ local function computeAngleFromCursor()
 end
 
 local function applyMinimapIcon(tex)
-  local customPath = "Interface\\AddOns\\UltimateHardcoreChallengeUI\\assets\\UHCC_MinimapIcon.tga"
-  local ok = tex:SetTexture(customPath)
-  if not ok then
-    tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-  end
-end
-
-local function getMinimapIconPath()
-  -- We can't reliably check file existence at runtime; just try custom first then fallback.
-  return "Interface\\AddOns\\UltimateHardcoreChallengeUI\\assets\\UHCC_MinimapIcon.tga", "Interface\\Icons\\INV_Misc_QuestionMark"
+  if not tex or not tex.SetTexture then return end
+  tex:SetTexture("Interface\\Icons\\Ability_Warrior_Rampage")
+  -- Gentle inset LibDBIcon-style (~5%); ring in OVERLAY above ARTWORK trims the corners.
+  tex:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+  tex:SetVertexColor(1, 1, 1, 1)
 end
 
 local function createMinimapButton()
@@ -3837,7 +3914,8 @@ local function createMinimapButton()
   local btn = CreateFrame("Button", "UHCC_MinimapButton", Minimap)
   UHCC.minimapButton = btn
 
-  btn:SetSize(32, 32)
+  -- Same footprint as LibDBIcon-1.0 (Classic Era): aligns icon + TrackingBorder HUD.
+  btn:SetSize(31, 31)
   btn:SetFrameStrata("HIGH")
   btn:SetFrameLevel(Minimap:GetFrameLevel() + 8)
   btn:SetMovable(true)
@@ -3847,33 +3925,22 @@ local function createMinimapButton()
 
   btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
-  local bg = btn:CreateTexture(nil, "BACKGROUND")
-  bg:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-  bg:SetSize(54, 54)
-  bg:SetPoint("CENTER", 10, -10)
-
-  -- Clean look: no pressed texture swap, just a single icon.
-  btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
-  local nt = btn:GetNormalTexture()
-  if nt then
-    nt:SetAllPoints(btn)
-    nt:SetVertexColor(1, 1, 1, 0)
-  end
-
-  btn:SetPushedTexture("Interface\\Buttons\\WHITE8X8")
-  local pt = btn:GetPushedTexture()
-  if pt then
-    pt:SetAllPoints(btn)
-    pt:SetVertexColor(1, 1, 1, 0)
-  end
+  -- BACKGROUND → ARTWORK → OVERLAY: dark chip, then spell art, ring on top (hides square edges).
+  local chip = btn:CreateTexture(nil, "BACKGROUND")
+  chip:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+  chip:SetSize(20, 20)
+  chip:SetPoint("TOPLEFT", 7, -5)
 
   local icon = btn:CreateTexture(nil, "ARTWORK")
-  icon:SetSize(20, 20)
-  icon:SetPoint("CENTER", 0, 0)
-  icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-  icon:SetVertexColor(1, 1, 1, 1)
+  icon:SetSize(17, 17)
+  icon:SetPoint("TOPLEFT", 7, -6)
   applyMinimapIcon(icon)
   btn.icon = icon
+
+  local ring = btn:CreateTexture(nil, "OVERLAY")
+  ring:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+  ring:SetSize(53, 53)
+  ring:SetPoint("TOPLEFT", 0, 0)
 
   btn:SetAlpha(1)
 
