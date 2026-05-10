@@ -16,7 +16,7 @@ end
 local DEFAULTS = {
   minimap = {
     angle = 225, -- degrees
-    radius = 55, -- pixels from minimap center
+    radius = 80, -- pixels from minimap center (slightly further out to hug the minimap rim)
   },
 }
 
@@ -24,7 +24,7 @@ local DEFAULTS = {
 local MAIN_FRAME_WIDTH, MAIN_FRAME_HEIGHT = 900, 500
 
 UHCC.TABS = {
-  { tab = "gear_quality", label = "Gear & Quality" },
+  { tab = "gear_quality", label = "Equipment & Quality" },
   { tab = "weapons_services", label = "Weapons & Services" },
   { tab = "professions_talents", label = "Professions & Talents" },
   { tab = "zones_dungeons", label = "Zones & Dungeons" },
@@ -85,6 +85,36 @@ UHCC.WORLD_ZONES = {
 }
 
 -- Dungeon map IDs (used for Zones & Dungeons tab + zone restriction overlay).
+-- Minimum player levels to enter (Classic Era).
+UHCC.DUNGEON_MIN_LEVEL = {
+  [2437] = 10, -- Ragefire Chasm
+  [718] = 10, -- Wailing Caverns
+  [1581] = 10, -- The Deadmines
+  [209] = 14, -- Shadowfang Keep
+  [719] = 15, -- Blackfathom Deeps
+  [717] = 15, -- The Stockade
+  [721] = 19, -- Gnomeregan
+  [491] = 25, -- Razorfen Kraul
+  [796] = 21, -- Scarlet Monastery
+  [722] = 35, -- Razorfen Downs
+  [1337] = 30, -- Uldaman
+  [1176] = 39, -- Zul'Farrak
+  [2100] = 30, -- Maraudon
+  [1477] = 45, -- The Temple of Atal'Hakkar
+  [1584] = 48, -- Blackrock Depths
+  [1583] = 48, -- Blackrock Spire
+  [2557] = 48, -- Dire Maul
+  [2057] = 48, -- Scholomance
+  [2017] = 48, -- Stratholme
+}
+
+-- Battleground minimum player levels (Classic Era).
+UHCC.BATTLEGROUND_MIN_LEVEL = {
+  [1460] = 10, -- Warsong Gulch
+  [1461] = 20, -- Arathi Basin
+  [1459] = 51, -- Alterac Valley
+}
+
 UHCC.DUNGEONS = {
   { 2437, "Ragefire Chasm" },
   { 718, "Wailing Caverns" },
@@ -109,50 +139,188 @@ UHCC.DUNGEONS = {
 
 UHCC.OPTIONS = (function()
   local t = {
-    -- Gear & Quality
+    -- Character equipment slots: order = price (free → most expensive), then quality tiers.
+    -- Free: Main Hand, Off Hand | 20s: Shirt…Chest, Range weapon (if class can use ranged slot)
+    -- 1g: Back, Shoulder, Head, Tabard | 5g: Neck, fingers, trinkets | 10g: Relic
     {
-      checkboxId = "GEAR-NONE",
-      label = "Gear Tier 0 - No Gear",
+      checkboxId = "EQUIP-MAINHAND",
+      label = "Main Hand",
       cost = 0,
       isFree = true,
-      category = "gear_type",
-      term = "none",
+      category = "equipment_slots_a",
+      term = "mainhand",
       tab = "gear_quality",
       inputType = "checkbox",
     },
     {
-      checkboxId = "GEAR-CLOTH",
-      label = "Gear Tier 1 - Cloth Gear",
-      cost = 30,
-      category = "gear_type",
-      term = "cloth",
+      checkboxId = "EQUIP-OFFHAND",
+      label = "Off Hand",
+      cost = 0,
+      isFree = true,
+      category = "equipment_slots_a",
+      term = "offhand",
       tab = "gear_quality",
       inputType = "checkbox",
     },
     {
-      checkboxId = "GEAR-LEATHER",
-      label = "Gear Tier 2 - Leather Gear",
+      checkboxId = "EQUIP-SHIRT",
+      label = "Shirt",
+      cost = 20,
+      category = "equipment_slots_a",
+      term = "shirt",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-HANDS",
+      label = "Hands",
+      cost = 20,
+      category = "equipment_slots_a",
+      term = "hands",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-WRIST",
+      label = "Wrist",
+      cost = 20,
+      category = "equipment_slots_a",
+      term = "wrist",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-WAIST",
+      label = "Waist",
+      cost = 20,
+      category = "equipment_slots_a",
+      term = "waist",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-LEGS",
+      label = "Legs",
+      cost = 20,
+      category = "equipment_slots_a",
+      term = "legs",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-FEET",
+      label = "Feet",
+      cost = 20,
+      category = "equipment_slots_a",
+      term = "feet",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-CHEST",
+      label = "Chest",
+      cost = 20,
+      category = "equipment_slots_a",
+      term = "chest",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-RANGE",
+      label = "Range weapon",
+      cost = 20,
+      category = "equipment_slots_a",
+      term = "range_weapon",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-BACK",
+      label = "Back",
+      cost = 100,
+      category = "equipment_slots_b",
+      term = "back",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-SHOULDER",
+      label = "Shoulder",
+      cost = 100,
+      category = "equipment_slots_b",
+      term = "shoulder",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-HEAD",
+      label = "Head",
+      cost = 100,
+      category = "equipment_slots_b",
+      term = "head",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-TABARD",
+      label = "Tabard",
+      cost = 100,
+      category = "equipment_slots_b",
+      term = "tabard",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-NECK",
+      label = "Neck",
       cost = 500,
-      category = "gear_type",
-      term = "leather",
+      category = "equipment_slots_b",
+      term = "neck",
       tab = "gear_quality",
       inputType = "checkbox",
     },
     {
-      checkboxId = "GEAR-MAIL",
-      label = "Gear Tier 3 - Mail Gear",
-      cost = 2000,
-      category = "gear_type",
-      term = "mail",
+      checkboxId = "EQUIP-FINGER1",
+      label = "Finger 1",
+      cost = 500,
+      category = "equipment_slots_b",
+      term = "finger1",
       tab = "gear_quality",
       inputType = "checkbox",
     },
     {
-      checkboxId = "GEAR-PLATE",
-      label = "Gear Tier 4 - Plate Gear",
-      cost = 5000,
-      category = "gear_type",
-      term = "plate",
+      checkboxId = "EQUIP-FINGER2",
+      label = "Finger 2",
+      cost = 500,
+      category = "equipment_slots_b",
+      term = "finger2",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-TRINKET1",
+      label = "Trinket 1",
+      cost = 500,
+      category = "equipment_slots_b",
+      term = "trinket1",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-TRINKET2",
+      label = "Trinket 2",
+      cost = 500,
+      category = "equipment_slots_b",
+      term = "trinket2",
+      tab = "gear_quality",
+      inputType = "checkbox",
+    },
+    {
+      checkboxId = "EQUIP-RELIC",
+      label = "Relic",
+      cost = 1000,
+      category = "equipment_slots_b",
+      term = "relic",
       tab = "gear_quality",
       inputType = "checkbox",
     },
@@ -217,42 +385,6 @@ UHCC.OPTIONS = (function()
       cost = 20000,
       category = "gear_quality",
       term = "epic",
-      tab = "gear_quality",
-      inputType = "checkbox",
-    },
-    {
-      checkboxId = "GEAR-CLOAKS",
-      label = "Cloaks",
-      cost = 500,
-      category = "gear_slots",
-      term = "cloaks",
-      tab = "gear_quality",
-      inputType = "checkbox",
-    },
-    {
-      checkboxId = "GEAR-RINGS",
-      label = "Rings",
-      cost = 1000,
-      category = "gear_slots",
-      term = "rings",
-      tab = "gear_quality",
-      inputType = "checkbox",
-    },
-    {
-      checkboxId = "GEAR-NECKLACE",
-      label = "Necklace",
-      cost = 1000,
-      category = "gear_slots",
-      term = "necklace",
-      tab = "gear_quality",
-      inputType = "checkbox",
-    },
-    {
-      checkboxId = "GEAR-TRINKETS",
-      label = "Trinkets",
-      cost = 1000,
-      category = "gear_slots",
-      term = "trinkets",
       tab = "gear_quality",
       inputType = "checkbox",
     },
@@ -326,8 +458,18 @@ UHCC.OPTIONS = (function()
       inputType = "checkbox",
     },
     {
+      checkboxId = "SETTINGS-MONEYMGT",
+      label = "Money Management",
+      description = "When enabled, checking options doesn't purchase them immediately. Use the Purchase button to commit. Purchases increase your debt, which reduces your available gold for future purchases until you pay it to your bank character.",
+      cost = 0,
+      category = "settings",
+      term = "money_mgt",
+      tab = "settings",
+      inputType = "checkbox",
+    },
+    {
       checkboxId = "SETTINGS-BANKNAME",
-      label = "Bank name",
+      label = "Bank Name (required if Money Management is ON)",
       description = "Allowed mailbox recipient when Mail is locked (temporarily suppresses the warning if you mail to this name).",
       cost = 0,
       category = "settings",
@@ -337,10 +479,10 @@ UHCC.OPTIONS = (function()
     },
   }
 
-  -- Zones & Dungeons: one checkbox per map from UHCC.WORLD_ZONES; 3 gold each (UHCC cost unit: floor(cost/100) = gold).
+  -- Zones & Dungeons: one checkbox per map from UHCC.WORLD_ZONES; 1 gold each (UHCC cost unit: floor(cost/100) = gold).
   -- Per continent: zones section then Cities section; Azeroth CSV rows → Battlegrounds column only.
   do
-    local ZONE_OPTION_COST = 300
+    local ZONE_OPTION_COST = 100
     local buckets = {
       kalimdor_zones = {},
       kalimdor_cities = {},
@@ -362,6 +504,17 @@ UHCC.OPTIONS = (function()
         b[#b + 1] = row
       end
     end
+
+    -- Battleground ordering (requested): WSG, AB, AV.
+    do
+      local order = { [1460] = 1, [1461] = 2, [1459] = 3 }
+      table.sort(buckets.battlegrounds, function(a, b)
+        local ao = order[tonumber(a and a[1])] or 999
+        local bo = order[tonumber(b and b[1])] or 999
+        if ao ~= bo then return ao < bo end
+        return tostring(a and a[2] or "") < tostring(b and b[2] or "")
+      end)
+    end
     local emitOrder = {
       "kalimdor_zones",
       "kalimdor_cities",
@@ -371,6 +524,8 @@ UHCC.OPTIONS = (function()
     }
     for _, catKey in ipairs(emitOrder) do
       for _, row in ipairs(buckets[catKey]) do
+        local mid = tonumber(row[1])
+        local minLvl = (catKey == "battlegrounds" and mid and UHCC.BATTLEGROUND_MIN_LEVEL and UHCC.BATTLEGROUND_MIN_LEVEL[mid]) or nil
         t[#t + 1] = {
           checkboxId = ("ZONE-%d"):format(row[1]),
           label = row[2],
@@ -379,6 +534,7 @@ UHCC.OPTIONS = (function()
           term = tostring(row[1]),
           tab = "zones_dungeons",
           inputType = "checkbox",
+          minPlayerLevel = minLvl,
         }
       end
     end
@@ -393,6 +549,7 @@ UHCC.OPTIONS = (function()
         term = tostring(d[1]),
         tab = "zones_dungeons",
         inputType = "checkbox",
+        minPlayerLevel = (UHCC.DUNGEON_MIN_LEVEL and UHCC.DUNGEON_MIN_LEVEL[d[1]]) or nil,
       }
     end
   end
@@ -441,6 +598,10 @@ local function ensureDB()
 
   if type(UHCC_DB.minimap.angle) ~= "number" then UHCC_DB.minimap.angle = DEFAULTS.minimap.angle end
   if type(UHCC_DB.minimap.radius) ~= "number" then UHCC_DB.minimap.radius = DEFAULTS.minimap.radius end
+  -- Legacy default radius was inset; migrate old value once (users can drag back if they prefer).
+  if UHCC_DB.minimap.radius == 55 then
+    UHCC_DB.minimap.radius = DEFAULTS.minimap.radius
+  end
 
   UHCC_DB.minimap.radius = clamp(UHCC_DB.minimap.radius, 30, 110)
   UHCC_DB.minimap.angle = normalizeAngle(UHCC_DB.minimap.angle)
@@ -454,7 +615,50 @@ local uhccOnboardingTimerScheduled = false
 
 local function ensureCharDB()
   if type(UHCC_CharDB) ~= "table" then UHCC_CharDB = {} end
-  if type(UHCC_CharDB.options) ~= "table" then UHCC_CharDB.options = {} end
+  -- Storage split:
+  -- - purchases: things the player "bought" (used by all restriction logic)
+  -- - settings: UI/settings toggles (Annoy me, Bank name, Money Management, etc.)
+  if type(UHCC_CharDB.purchases) ~= "table" then UHCC_CharDB.purchases = {} end
+  -- Purchases pending payment (Money Management ON): not effective until debt is paid.
+  if type(UHCC_CharDB.pendingPurchases) ~= "table" then UHCC_CharDB.pendingPurchases = {} end
+  if type(UHCC_CharDB.settings) ~= "table" then UHCC_CharDB.settings = {} end
+
+  -- Migration from older versions (everything lived in `UHCC_CharDB.options`).
+  if type(UHCC_CharDB.options) == "table" then
+    for _, opt in ipairs(UHCC.OPTIONS or {}) do
+      if opt and opt.checkboxId then
+        local v = UHCC_CharDB.options[opt.checkboxId]
+        if v ~= nil then
+          if opt.tab == "settings" then
+            if UHCC_CharDB.settings[opt.checkboxId] == nil then UHCC_CharDB.settings[opt.checkboxId] = v end
+          else
+            if UHCC_CharDB.purchases[opt.checkboxId] == nil then UHCC_CharDB.purchases[opt.checkboxId] = v end
+          end
+        end
+      end
+    end
+    -- Keep `options` around for backward compatibility, but stop using it.
+  end
+
+  if type(UHCC_CharDB.moneyDueCopper) ~= "number" then UHCC_CharDB.moneyDueCopper = 0 end
+
+  -- Money Management migration:
+  -- If there is outstanding debt, purchases must not be effective until paid.
+  -- Older sessions may have already written into `purchases`; move them to `pendingPurchases` once.
+  if UHCC_CharDB._uhccMoneyMgtPendingMigrationDone ~= true then
+    local mmOn = (type(UHCC_CharDB.settings) == "table") and (UHCC_CharDB.settings["SETTINGS-MONEYMGT"] == true)
+    local due = tonumber(UHCC_CharDB.moneyDueCopper) or 0
+    if mmOn and due > 0 then
+      for k, v in pairs(UHCC_CharDB.purchases or {}) do
+        if UHCC_CharDB.pendingPurchases[k] == nil then
+          UHCC_CharDB.pendingPurchases[k] = v
+        end
+      end
+      UHCC_CharDB.purchases = {}
+    end
+    UHCC_CharDB._uhccMoneyMgtPendingMigrationDone = true
+  end
+
   if UHCC_CharDB._uhccFirstAddonLoad == nil then
     UHCC_CharDB._uhccFirstAddonLoad = true
   end
@@ -475,7 +679,7 @@ local function uhccScheduleOnboardingIfNeeded()
   ensureCharDB()
   if UHCC_CharDB._uhccWelcomeSeen then return end
   local virginOptions = true
-  for _ in pairs(UHCC_CharDB.options) do
+  for _ in pairs(UHCC_CharDB.purchases) do
     virginOptions = false
     break
   end
@@ -506,6 +710,17 @@ local function optionLocksFreeChoice(opt)
   if not opt or opt.noFreeLock then return false end
   -- Starting zones must be free per-character to avoid immediate darkness overlay.
   if opt.tab == "zones_dungeons" and opt.inputType == "checkbox" then
+    -- Faction capital should also be free (locked).
+    local mid = tonumber(opt.term)
+    if mid then
+      local faction = (UnitFactionGroup and UnitFactionGroup("player")) or nil
+      if faction == "Alliance" and mid == 1453 then -- Stormwind City
+        return true
+      elseif faction == "Horde" and mid == 1454 then -- Orgrimmar
+        return true
+      end
+    end
+
     local raceName, raceFile, raceId = UnitRace and UnitRace("player")
     local rf = raceFile and string.lower(tostring(raceFile)) or nil
     local rn = raceName and string.lower(tostring(raceName)) or nil
@@ -547,8 +762,8 @@ local function optionLocksFreeChoice(opt)
       startMid = (rf and RACE_STARTING_ZONE_MAP_ID[rf]) or (rn and RACE_STARTING_ZONE_MAP_ID[rn]) or nil
     end
     if startMid then
-      local mid = tonumber(opt.term)
-      if mid and mid == startMid then
+      local mid2 = tonumber(opt.term)
+      if mid2 and mid2 == startMid then
         return true
       end
     end
@@ -563,20 +778,6 @@ local function uhccGetDisplayCostForOption(opt)
   end
   return (opt and opt.cost) or 0
 end
-
--- Armor weight tiers each class can equip (Classic Era). classFile = 2nd return of UnitClass("player").
-local CLASS_ARMOR_ALLOWED = {
-  WARRIOR = { cloth = true, leather = true, mail = true, plate = true },
-  PALADIN = { cloth = true, leather = true, mail = true, plate = true },
-  DEATHKNIGHT = { cloth = true, leather = true, mail = true, plate = true },
-  HUNTER = { cloth = true, leather = true, mail = true, plate = false },
-  ROGUE = { cloth = true, leather = true, mail = false, plate = false },
-  PRIEST = { cloth = true, leather = false, mail = false, plate = false },
-  SHAMAN = { cloth = true, leather = true, mail = true, plate = false },
-  MAGE = { cloth = true, leather = false, mail = false, plate = false },
-  WARLOCK = { cloth = true, leather = false, mail = false, plate = false },
-  DRUID = { cloth = true, leather = true, mail = false, plate = false },
-}
 
 -- Weapon types per class (Classic Era). We only care about the weapon "terms" we expose as purchases.
 -- Terms used by UHCC.OPTIONS (weapons): one_handed, two_handed, daggers, bows, guns, crossbows, throwing.
@@ -593,15 +794,6 @@ local CLASS_WEAPON_ALLOWED = {
   DRUID = { one_handed = true, two_handed = true, daggers = true, bows = false, guns = false, crossbows = false, throwing = false },
 }
 
-local function playerCanUseGearArmorTerm(term)
-  if term == "none" or term == nil or term == "" then return true end
-  local _, classFile = UnitClass("player")
-  if not classFile then return true end
-  local allowed = CLASS_ARMOR_ALLOWED[classFile]
-  if not allowed then return true end
-  return not not allowed[term]
-end
-
 local function playerCanUseWeaponTerm(term)
   if term == "none" or term == nil or term == "" then return true end
   local _, classFile = UnitClass("player")
@@ -611,13 +803,21 @@ local function playerCanUseWeaponTerm(term)
   return not not allowed[term]
 end
 
-local function isGearArmorTierOption(opt)
-  return opt
-    and opt.tab == "gear_quality"
-    and opt.category == "gear_type"
-    and opt.inputType == "checkbox"
-    and opt.term
-    and opt.term ~= "none"
+-- Relic-slot items (Classic Era librams / totems / idols): only relevant classes — hide UI for others.
+local function uhccPlayerShowsRelicSlotOption()
+  local _, cf = UnitClass("player")
+  if not cf then return false end
+  return cf == "PALADIN" or cf == "SHAMAN" or cf == "DRUID"
+end
+
+-- Ranged slot (~slot 18) for bows/guns/thrown/wands — matches weapon permissions + casters using wands.
+local function uhccPlayerShowsRangeWeaponSlotOption()
+  local _, cf = UnitClass("player")
+  if not cf then return false end
+  if cf == "PRIEST" or cf == "MAGE" or cf == "WARLOCK" or cf == "HUNTER" then return true end
+  local allowed = CLASS_WEAPON_ALLOWED[cf]
+  if allowed and (allowed.bows or allowed.guns or allowed.crossbows or allowed.throwing) then return true end
+  return false
 end
 
 local function isWeaponPurchaseOption(opt)
@@ -629,26 +829,12 @@ local function isWeaponPurchaseOption(opt)
     and opt.term ~= "none"
 end
 
-local function pruneInvalidGearArmorSelections()
-  ensureCharDB()
-  for _, opt in ipairs(UHCC.OPTIONS) do
-    if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
-      -- Only prune if the player previously saved a selection.
-      -- Writing defaults here would make `options` non-empty and break "virgin" onboarding detection.
-      if UHCC_CharDB.options and UHCC_CharDB.options[opt.checkboxId] ~= nil then
-        UHCC_CharDB.options[opt.checkboxId] = false
-      end
-    end
-  end
-end
-
 local function pruneInvalidWeaponSelections()
   ensureCharDB()
   for _, opt in ipairs(UHCC.OPTIONS) do
     if isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term) then
-      -- Same onboarding constraint: don't write defaults into a virgin options table.
-      if UHCC_CharDB.options and UHCC_CharDB.options[opt.checkboxId] ~= nil then
-        UHCC_CharDB.options[opt.checkboxId] = false
+      if UHCC_CharDB.purchases and UHCC_CharDB.purchases[opt.checkboxId] ~= nil then
+        UHCC_CharDB.purchases[opt.checkboxId] = false
       end
     end
   end
@@ -722,10 +908,7 @@ local function getCharCheckboxState(opt)
   if uhccOptionDeniedInSelfFound(opt) then
     return false
   end
-  if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
-    return false
-  end
-  local v = UHCC_CharDB.options[opt.checkboxId]
+  local v = UHCC_CharDB.purchases[opt.checkboxId]
   if v == nil then return false end
   return not not v
 end
@@ -746,7 +929,35 @@ end
 
 local function uhccAnnoyEnabled()
   ensureCharDB()
-  return UHCC_CharDB.options and UHCC_CharDB.options["SETTINGS-ANNOY"] == true
+  return UHCC_CharDB.settings and UHCC_CharDB.settings["SETTINGS-ANNOY"] == true
+end
+
+local function uhccMoneyManagementEnabled()
+  ensureCharDB()
+  return UHCC_CharDB.settings and UHCC_CharDB.settings["SETTINGS-MONEYMGT"] == true
+end
+
+local function uhccGetMoneyDueCopper()
+  ensureCharDB()
+  return tonumber(UHCC_CharDB.moneyDueCopper) or 0
+end
+
+local function uhccSetMoneyDueCopper(v)
+  ensureCharDB()
+  v = tonumber(v) or 0
+  if v < 0 then v = 0 end
+  UHCC_CharDB.moneyDueCopper = v
+end
+
+local function uhccCommittedPurchasesView()
+  -- For UI/draft purposes: show paid purchases + pending purchases.
+  ensureCharDB()
+  local t = {}
+  for k, v in pairs(UHCC_CharDB.purchases) do t[k] = v end
+  for k, v in pairs(UHCC_CharDB.pendingPurchases) do
+    if t[k] == nil then t[k] = v end
+  end
+  return t
 end
 
 local function uhccIsOptionCheckedById(id)
@@ -764,7 +975,7 @@ end
 
 local function uhccGetBankNameSetting()
   ensureCharDB()
-  local v = UHCC_CharDB.options and UHCC_CharDB.options["SETTINGS-BANKNAME"]
+  local v = UHCC_CharDB.settings and UHCC_CharDB.settings["SETTINGS-BANKNAME"]
   return tostring(v or "")
 end
 
@@ -1069,6 +1280,50 @@ local function uhccNextMissingBagRankMessage(nextRank)
   return "Buy the next Bag slot first"
 end
 
+-- Character sheet slot purchases: all listed ids must be owned (rings/trinkets = both slots).
+local function uhccEquipSlotPurchasesMet(ids)
+  if not ids then return true end
+  for _, cid in ipairs(ids) do
+    if not uhccIsPurchasedById(cid) then return false end
+  end
+  return true
+end
+
+local function uhccEquipSlotPurchaseIdsForEquipLoc(equipLoc, itemClassID, itemSubClassID)
+  if not equipLoc or equipLoc == "" then return nil end
+  if equipLoc == "INVTYPE_HEAD" then return { "EQUIP-HEAD" } end
+  if equipLoc == "INVTYPE_NECK" then return { "EQUIP-NECK" } end
+  if equipLoc == "INVTYPE_SHOULDER" then return { "EQUIP-SHOULDER" } end
+  if equipLoc == "INVTYPE_BODY" then return { "EQUIP-SHIRT" } end
+  if equipLoc == "INVTYPE_CHEST" or equipLoc == "INVTYPE_ROBE" then return { "EQUIP-CHEST" } end
+  if equipLoc == "INVTYPE_WAIST" then return { "EQUIP-WAIST" } end
+  if equipLoc == "INVTYPE_LEGS" then return { "EQUIP-LEGS" } end
+  if equipLoc == "INVTYPE_FEET" then return { "EQUIP-FEET" } end
+  if equipLoc == "INVTYPE_WRIST" then return { "EQUIP-WRIST" } end
+  if equipLoc == "INVTYPE_HAND" then return { "EQUIP-HANDS" } end
+  if equipLoc == "INVTYPE_CLOAK" then return { "EQUIP-BACK" } end
+  if equipLoc == "INVTYPE_TABARD" then return { "EQUIP-TABARD" } end
+  if equipLoc == "INVTYPE_FINGER" then return { "EQUIP-FINGER1", "EQUIP-FINGER2" } end
+  if equipLoc == "INVTYPE_TRINKET" then return { "EQUIP-TRINKET1", "EQUIP-TRINKET2" } end
+  if equipLoc == "INVTYPE_WEAPONMAINHAND" or equipLoc == "INVTYPE_2HWEAPON" then return { "EQUIP-MAINHAND" } end
+  if equipLoc == "INVTYPE_WEAPONOFFHAND" or equipLoc == "INVTYPE_SHIELD" or equipLoc == "INVTYPE_HOLDABLE" then
+    return { "EQUIP-OFFHAND" }
+  end
+  -- Relic-slot items vs ranged weapons (bows, guns, thrown, wands share slot 18 in Classic).
+  itemClassID = tonumber(itemClassID)
+  itemSubClassID = tonumber(itemSubClassID)
+  local relicWeaponSc = tonumber(_G.LE_ITEM_WEAPON_RELIC)
+  local isWeaponRelic = (itemClassID == 2 and relicWeaponSc and itemSubClassID == relicWeaponSc)
+  if equipLoc == "INVTYPE_RELIC" or isWeaponRelic then
+    return { "EQUIP-RELIC" }
+  end
+  if equipLoc == "INVTYPE_RANGED" or equipLoc == "INVTYPE_RANGEDRIGHT" or equipLoc == "INVTYPE_THROWN" then
+    return { "EQUIP-RANGE" }
+  end
+  if equipLoc == "INVTYPE_WEAPON" then return { "EQUIP-MAINHAND" } end
+  return nil
+end
+
 local function uhccItemIsAllowedByPurchases(itemLink)
   if not itemLink or itemLink == "" then
     return true, nil
@@ -1116,6 +1371,9 @@ local function uhccItemIsAllowedByPurchases(itemLink)
       or equipLoc == "INVTYPE_WEAPONOFFHAND"
       or equipLoc == "INVTYPE_RANGED"
       or equipLoc == "INVTYPE_RANGEDRIGHT"
+      or equipLoc == "INVTYPE_RELIC"
+      or equipLoc == "INVTYPE_THROWN"
+      or equipLoc == "INVTYPE_HOLDABLE"
     then
       return true
     end
@@ -1161,15 +1419,6 @@ local function uhccItemIsAllowedByPurchases(itemLink)
     end
   end
 
-  local function armorWeightAllowedFromSubTypeString(subType)
-    if type(subType) ~= "string" or subType == "" then return nil end
-    if ITEM_SUBCLASS_ARMOR_CLOTH and subType == ITEM_SUBCLASS_ARMOR_CLOTH then return uhccIsPurchasedById("GEAR-CLOTH") end
-    if ITEM_SUBCLASS_ARMOR_LEATHER and subType == ITEM_SUBCLASS_ARMOR_LEATHER then return uhccIsPurchasedById("GEAR-LEATHER") end
-    if ITEM_SUBCLASS_ARMOR_MAIL and subType == ITEM_SUBCLASS_ARMOR_MAIL then return uhccIsPurchasedById("GEAR-MAIL") end
-    if ITEM_SUBCLASS_ARMOR_PLATE and subType == ITEM_SUBCLASS_ARMOR_PLATE then return uhccIsPurchasedById("GEAR-PLATE") end
-    return nil
-  end
-
   local function weaponAllowedFromSubTypeString(subType)
     if type(subType) ~= "string" or subType == "" then return nil end
     if ITEM_SUBCLASS_WEAPON_DAGGER and subType == ITEM_SUBCLASS_WEAPON_DAGGER then return uhccIsPurchasedById("WEAPON-DAGGERS") end
@@ -1206,46 +1455,17 @@ local function uhccItemIsAllowedByPurchases(itemLink)
     return false, reasons
   end
 
-  -- Accessories.
-  if equipLoc == "INVTYPE_CLOAK" then
-    if not uhccIsPurchasedById("GEAR-CLOAKS") then addReason("Buy Cloaks first") end
-    qualityCheck()
-    if #reasons == 0 then return true, nil end
-    return false, reasons
-  end
-  if equipLoc == "INVTYPE_NECK" then
-    if not uhccIsPurchasedById("GEAR-NECKLACE") then addReason("Buy Necklace first") end
-    qualityCheck()
-    if #reasons == 0 then return true, nil end
-    return false, reasons
-  end
-  if equipLoc == "INVTYPE_FINGER" then
-    if not uhccIsPurchasedById("GEAR-RINGS") then addReason("Buy Rings first") end
-    qualityCheck()
-    if #reasons == 0 then return true, nil end
-    return false, reasons
-  end
-  if equipLoc == "INVTYPE_TRINKET" then
-    if not uhccIsPurchasedById("GEAR-TRINKETS") then addReason("Buy Trinkets first") end
-    qualityCheck()
-    if #reasons == 0 then return true, nil end
-    return false, reasons
+  do
+    local slotIds = uhccEquipSlotPurchaseIdsForEquipLoc(equipLoc, classID, subclassID)
+    if slotIds and not uhccEquipSlotPurchasesMet(slotIds) then
+      addReason("Buy the matching character slot first")
+    end
   end
 
   -- Armor.
   if classID == 4 or itemType == (ITEM_CLASS_ARMOR or "Armor") then
-    if subclassID == 1 and not uhccIsPurchasedById("GEAR-CLOTH") then addReason("Buy Cloth gear first") end
-    if subclassID == 2 and not uhccIsPurchasedById("GEAR-LEATHER") then addReason("Buy Leather gear first") end
-    if subclassID == 3 and not uhccIsPurchasedById("GEAR-MAIL") then addReason("Buy Mail gear first") end
-    if subclassID == 4 and not uhccIsPurchasedById("GEAR-PLATE") then addReason("Buy Plate gear first") end
-
     if equipLoc == "INVTYPE_SHIELD" and not uhccIsPurchasedById("WEAPON-ONEHAND") then
       addReason("Buy One Handed Weapons first")
-    end
-
-    local ok = armorWeightAllowedFromSubTypeString(itemSubType)
-    if ok == false and #reasons == 0 then
-      addReason("Buy the required gear tier first")
     end
 
     qualityCheck()
@@ -1267,7 +1487,7 @@ local function uhccItemIsAllowedByPurchases(itemLink)
       addReason("Buy the required weapon type first")
     end
 
-    if equipLoc == "INVTYPE_2HWEAPON" or equipLoc == "INVTYPE_RANGED" or equipLoc == "INVTYPE_RANGEDRIGHT" then
+    if equipLoc == "INVTYPE_2HWEAPON" or equipLoc == "INVTYPE_RANGED" or equipLoc == "INVTYPE_RANGEDRIGHT" or equipLoc == "INVTYPE_THROWN" then
       if not uhccIsPurchasedById("WEAPON-TWOHAND") then addReason("Buy Two Handed Weapons first") end
     end
     if equipLoc == "INVTYPE_WEAPON" or equipLoc == "INVTYPE_WEAPONMAINHAND" or equipLoc == "INVTYPE_WEAPONOFFHAND" then
@@ -1324,6 +1544,8 @@ local uhccTradeWindowOpen = false
 local uhccMailboxOpen = false
 local uhccMailHooksInstalled = false
 local uhccMailRecipientHooksInstalled = false
+local uhccLastSendMailRecipient = nil
+local uhccLastSendMailMoneyCopper = 0
 
 local function uhccInstallMailFrameHooks()
   if uhccMailHooksInstalled then return end
@@ -1351,6 +1573,32 @@ local function uhccInstallMailRecipientHooks()
       uhccUpdateEquipViolationOverlay()
     end
   end)
+
+  -- Capture outgoing mail payment details before Blizzard clears fields.
+  if _G.SendMailMailButton and _G.SendMailMailButton.HookScript then
+    _G.SendMailMailButton:HookScript("OnClick", function()
+      local recip = nil
+      if _G.SendMailNameEditBox and _G.SendMailNameEditBox.GetText then
+        recip = _G.SendMailNameEditBox:GetText()
+      end
+      uhccLastSendMailRecipient = recip
+
+      local m = 0
+      if GetSendMailMoney then
+        m = tonumber(GetSendMailMoney()) or 0
+      else
+        -- Fallback: read from money input boxes if present.
+        local g = tonumber((_G.SendMailMoneyGold and _G.SendMailMoneyGold.GetText and _G.SendMailMoneyGold:GetText()) or 0) or 0
+        local s = tonumber((_G.SendMailMoneySilver and _G.SendMailMoneySilver.GetText and _G.SendMailMoneySilver:GetText()) or 0) or 0
+        local c = tonumber((_G.SendMailMoneyCopper and _G.SendMailMoneyCopper.GetText and _G.SendMailMoneyCopper:GetText()) or 0) or 0
+        if g < 0 then g = 0 end
+        if s < 0 then s = 0 end
+        if c < 0 then c = 0 end
+        m = g * 10000 + s * 100 + c
+      end
+      uhccLastSendMailMoneyCopper = m
+    end)
+  end
 end
 
 local function uhccEnsureMailHooksInstalled()
@@ -1865,28 +2113,6 @@ local function uhccInstallBagHighlightHooks()
     uhccUpdateBagButtonHighlight(button)
   end)
 
-  -- Cursor → bag slot (equipment bar): often no immediate PLAYER_EQUIPMENT_CHANGED sync with GetInventoryItemLink.
-  if not UHCC._bagPutItemInBagHooked then
-    UHCC._bagPutItemInBagHooked = true
-    if type(_G.PutItemInBag) == "function" then
-      hooksecurefunc("PutItemInBag", function()
-        if C_Timer and C_Timer.After then
-          C_Timer.After(0, function()
-            uhccUpdateBagSlotButtons()
-            uhccUpdateEquipViolationOverlay()
-          end)
-          C_Timer.After(0.1, function()
-            uhccUpdateBagSlotButtons()
-            uhccUpdateEquipViolationOverlay()
-          end)
-        else
-          uhccUpdateBagSlotButtons()
-          uhccUpdateEquipViolationOverlay()
-        end
-      end)
-    end
-  end
-
   -- Replace the default Blizzard tooltip handlers for bag item buttons.
   -- (Buttons get their scripts re-assigned by Blizzard; overriding the global handlers is reliable.)
   if type(_G.ContainerFrameItemButton_OnEnter) == "function" and not UHCC._origContainerFrameItemButton_OnEnter then
@@ -2024,24 +2250,6 @@ local function uhccEnsureBagHighlightHooksInstalled()
   tick()
 end
 
--- Defined after uhccEnsureBagHighlightHooksInstalled (Lua local scope); bag events omit PLAYER_EQUIPMENT_CHANGED briefly.
-local function uhccScheduleBagInventoryViolationRefresh()
-  uhccEnsureBagHighlightHooksInstalled()
-  uhccRefreshAllBagHighlights()
-  uhccUpdateBagSlotButtons()
-  uhccUpdateEquipViolationOverlay()
-  if C_Timer and C_Timer.After then
-    C_Timer.After(0, function()
-      uhccUpdateBagSlotButtons()
-      uhccUpdateEquipViolationOverlay()
-    end)
-    C_Timer.After(0.1, function()
-      uhccUpdateBagSlotButtons()
-      uhccUpdateEquipViolationOverlay()
-    end)
-  end
-end
-
 local function uhccStartBagHighlightTicker()
   if UHCC._bagHighlightTicker then return end
   local f = CreateFrame("Frame")
@@ -2070,15 +2278,13 @@ local function computeTotalSpentCopperFromCharDB()
     if opt.tab ~= "settings" then
       if opt.inputType == "checkbox" then
         if not optionLocksFreeChoice(opt) then
-          if isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term) then
-            -- cannot equip: never counts toward Spent
-          elseif UHCC_CharDB.options[opt.checkboxId] then
+          if UHCC_CharDB.purchases[opt.checkboxId] then
             total = total + uhccCostToCopper(opt.cost)
           end
         end
       elseif opt.inputType == "range" then
         local mn, mx = opt.min or 0, opt.max or 100
-        local v = tonumber(UHCC_CharDB.options[opt.checkboxId])
+        local v = tonumber(UHCC_CharDB.purchases[opt.checkboxId])
         if v == nil then v = mn end
         v = clamp(math.floor(v + 0.5), mn, mx)
         local per = tonumber(opt.cost) or 0
@@ -2087,6 +2293,38 @@ local function computeTotalSpentCopperFromCharDB()
     end
   end
   return total
+end
+
+local function uhccComputeAdditionalCostCopperForDraft(draft, purchases)
+  local add = 0
+  draft = (type(draft) == "table") and draft or {}
+  purchases = (type(purchases) == "table") and purchases or {}
+  for _, opt in ipairs(UHCC.OPTIONS) do
+    if opt and opt.tab ~= "settings" and not optionLocksFreeChoice(opt) then
+      if opt.inputType == "checkbox" then
+        local was = purchases[opt.checkboxId] and true or false
+        local now = draft[opt.checkboxId] and true or false
+        if isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term) then
+          -- cannot use: never counts
+        elseif (not was) and now then
+          add = add + uhccCostToCopper(opt.cost)
+        end
+      elseif opt.inputType == "range" then
+        local mn, mx = opt.min or 0, opt.max or 100
+        local wasV = tonumber(purchases[opt.checkboxId])
+        if wasV == nil then wasV = mn end
+        wasV = clamp(math.floor(wasV + 0.5), mn, mx)
+        local nowV = tonumber(draft[opt.checkboxId])
+        if nowV == nil then nowV = wasV end
+        nowV = clamp(math.floor(nowV + 0.5), mn, mx)
+        if nowV > wasV then
+          local per = tonumber(opt.cost) or 0
+          add = add + uhccCostToCopper(per * (nowV - wasV))
+        end
+      end
+    end
+  end
+  return add
 end
 
 -- Zone restriction overlay: unpurchased zone → dark screen (mouse passes through).
@@ -2339,7 +2577,10 @@ local function resetCharChallengeData()
   for k in pairs(UHCC_CharDB) do
     UHCC_CharDB[k] = nil
   end
-  UHCC_CharDB.options = {}
+  UHCC_CharDB.purchases = {}
+  UHCC_CharDB.settings = {}
+  UHCC_CharDB.pendingPurchases = {}
+  UHCC_CharDB.moneyDueCopper = 0
   uhccOnboardingTimerScheduled = false
   ensureCharDB()
   -- Make sure onboarding (welcome / level tip) can run again for this character.
@@ -2576,8 +2817,9 @@ local function buildTabPage(panel, tabName, spec)
   local colPitch = math.floor((innerScrollW - 16) / 3)
   local colX = { 8, 8 + colPitch, 8 + colPitch * 2 }
   local rowH = 24
-  -- Zones tab: up to ~25 rows per continent in one column; default 15 is enough for other tabs.
-  local maxRows = (tabName == "Zones & Dungeons") and 30 or 15
+  -- Zones tab: up to ~25 rows per continent in one column.
+  -- Equipment tab: slots in columns 1–2, Gear Quality + Quest Gear in column 3.
+  local maxRows = (tabName == "Zones & Dungeons") and 30 or (tabName == "Equipment & Quality") and 32 or 15
   local maxCols = 3
   local blockGap = 12
 
@@ -2627,20 +2869,53 @@ local function buildTabPage(panel, tabName, spec)
       if item.column ~= nil then
         setColumnStart(item.column)
       end
-      local x, y = lineToPos(line)
-      addSectionTitleAt(child, x, y, item.text)
-      line = line + 1
+      if item.text and item.text ~= "" then
+        local x, y = lineToPos(line)
+        addSectionTitleAt(child, x, y, item.text)
+        line = line + 1
+      end
     elseif item.kind == "checkbox" then
       local x, y = lineToPos(line)
       local cb = addCheckboxAt(child, x, y, item.text, item.opts)
+      cb.UHCC_baseText = item.text
       cb.UHCC_option = item.option
       cb.checkboxId = item.option and item.option.checkboxId or nil
       cb.cost = item.option and item.option.cost or nil
+      -- Register purchase checkboxes for Money Management dynamic enabling/disabling.
+      do
+        local mf = UHCC.mainFrame
+        if mf and cb.checkboxId and item.option and item.option.tab ~= "settings" then
+          mf.UHCC_purchaseControls = mf.UHCC_purchaseControls or {}
+          mf.UHCC_purchaseControls[cb.checkboxId] = cb
+        end
+      end
       if cb.checkboxId and cb:IsEnabled() then
         cb:HookScript("OnClick", function(self)
           ensureCharDB()
-          UHCC_CharDB.options[self.checkboxId] = self:GetChecked() and true or false
-          recalcSpentDisplay()
+          local checked = self:GetChecked() and true or false
+          local mf = UHCC.mainFrame
+          if uhccMoneyManagementEnabled() and mf then
+            -- Money Management: allow cancelling already-committed due (pending) purchases with confirmation.
+            if (not checked) and UHCC_CharDB.pendingPurchases and UHCC_CharDB.pendingPurchases[self.checkboxId] then
+              -- Revert the visual toggle immediately; the popup will apply the change on accept.
+              self:SetChecked(true)
+              if StaticPopup_Show and self.UHCC_option and self.UHCC_option.label then
+                StaticPopup_Show("UHCC_CANCEL_DUE_PURCHASE", self.UHCC_option.label, nil, { checkbox = self, option = self.UHCC_option })
+              end
+              return
+            end
+            -- Ensure we never fall back to direct persistence when MM is enabled.
+            if type(mf.UHCC_draftPurchases) ~= "table" then
+              mf.UHCC_draftPurchases = {}
+              local base = uhccCommittedPurchasesView()
+              for k, v in pairs(base) do mf.UHCC_draftPurchases[k] = v end
+            end
+            mf.UHCC_draftPurchases[self.checkboxId] = checked
+            if mf.UHCC_UpdateMoneyUI then mf:UHCC_UpdateMoneyUI() end
+          else
+            UHCC_CharDB.purchases[self.checkboxId] = checked
+            recalcSpentDisplay()
+          end
         end)
       end
       line = line + 1
@@ -2660,7 +2935,14 @@ local function buildTabPage(panel, tabName, spec)
       local startVal = item.min or 0
       if item.option and item.option.checkboxId then
         ensureCharDB()
-        local sv = tonumber(UHCC_CharDB.options[item.option.checkboxId])
+        local sv = nil
+        local mf = UHCC.mainFrame
+        if uhccMoneyManagementEnabled() and mf and type(mf.UHCC_draftPurchases) == "table" then
+          sv = tonumber(mf.UHCC_draftPurchases[item.option.checkboxId])
+        end
+        if sv == nil then
+          sv = tonumber(UHCC_CharDB.purchases[item.option.checkboxId])
+        end
         if sv ~= nil then
           startVal = clamp(math.floor(sv + 0.5), item.min, item.max)
         end
@@ -2684,8 +2966,19 @@ local function buildTabPage(panel, tabName, spec)
         if not slider.UHCC_readyForPersist then return end
         if item.option and item.option.checkboxId then
           ensureCharDB()
-          UHCC_CharDB.options[item.option.checkboxId] = iv
-          recalcSpentDisplay()
+          local mf = UHCC.mainFrame
+          if uhccMoneyManagementEnabled() and mf then
+            if type(mf.UHCC_draftPurchases) ~= "table" then
+              mf.UHCC_draftPurchases = {}
+              local base = uhccCommittedPurchasesView()
+              for k, v in pairs(base) do mf.UHCC_draftPurchases[k] = v end
+            end
+            mf.UHCC_draftPurchases[item.option.checkboxId] = iv
+            if mf.UHCC_UpdateMoneyUI then mf:UHCC_UpdateMoneyUI() end
+          else
+            UHCC_CharDB.purchases[item.option.checkboxId] = iv
+            recalcSpentDisplay()
+          end
         end
       end)
 
@@ -2731,7 +3024,8 @@ local function buildTabPage(panel, tabName, spec)
       local padX = 16
       local y = -settingsCursorY
       local cb = CreateFrame("CheckButton", nil, child, "UICheckButtonTemplate")
-      cb:SetPoint("TOPLEFT", child, "TOPLEFT", padX, y)
+      local indent = (item.opts and tonumber(item.opts.indent)) or 0
+      cb:SetPoint("TOPLEFT", child, "TOPLEFT", padX + indent, y)
       cb.Text:SetText(item.label)
       cb.Text:SetFontObject("GameFontNormalLarge")
       cb.Text:SetTextColor(1, 1, 1, 1)
@@ -2746,13 +3040,74 @@ local function buildTabPage(panel, tabName, spec)
       cb.checkboxId = item.option and item.option.checkboxId or nil
       cb.cost = item.option and item.option.cost or nil
 
-      if cb.checkboxId and cb:IsEnabled() then
+      -- Always hook settings checkboxes (they may be enabled/disabled dynamically).
+      if cb.checkboxId then
         cb:HookScript("OnClick", function(self)
           ensureCharDB()
-          UHCC_CharDB.options[self.checkboxId] = self:GetChecked() and true or false
+          UHCC_CharDB.settings[self.checkboxId] = self:GetChecked() and true or false
+          -- Money Management depends on Annoy me.
+          if self.checkboxId == "SETTINGS-ANNOY" then
+            local mf = UHCC.mainFrame
+            local mm = (mf and mf.UHCC_settingsControls) and mf.UHCC_settingsControls["SETTINGS-MONEYMGT"] or nil
+            if not self:GetChecked() then
+              UHCC_CharDB.settings["SETTINGS-MONEYMGT"] = false
+              if mm then
+                mm:SetChecked(false)
+                mm:SetEnabled(false)
+                if mm.Text then mm.Text:SetTextColor(0.7, 0.7, 0.7, 1) end
+              end
+            else
+              if mm then
+                mm:SetEnabled(true)
+                if mm.Text then mm.Text:SetTextColor(1, 1, 1, 1) end
+              end
+            end
+          end
+          -- If Money Management was toggled while the window is open, (re)initialize the draft state now.
+          if self.checkboxId == "SETTINGS-MONEYMGT" then
+            -- Bank Name is required: allow checking first, but prompt/focus immediately.
+            if self:GetChecked() then
+              local bn = uhccNormalizeNameForCompare(uhccGetBankNameSetting())
+              if bn == "" then
+                print("|cffffcc00UHCC|r: Please fill in Bank Name to enable Money Management.")
+                local mf2 = UHCC.mainFrame
+                if mf2 and mf2.UHCC_settingsControls and mf2.UHCC_settingsControls["SETTINGS-BANKNAME"] then
+                  local eb = mf2.UHCC_settingsControls["SETTINGS-BANKNAME"]
+                  if eb and eb.SetFocus then
+                    eb:SetFocus()
+                    eb:HighlightText()
+                  end
+                end
+              end
+            end
+            local mf = UHCC.mainFrame
+            if mf then
+              if self:GetChecked() then
+                mf.UHCC_draftPurchases = {}
+                local base = uhccCommittedPurchasesView()
+                for k, v in pairs(base) do mf.UHCC_draftPurchases[k] = v end
+              else
+                mf.UHCC_draftPurchases = nil
+              end
+            end
+          end
+          -- Keep Money UI in sync when toggling the mode.
+          do
+            local mf = UHCC.mainFrame
+            if mf and mf.UHCC_UpdateMoneyUI then mf:UHCC_UpdateMoneyUI() end
+          end
           -- Apply immediately (zone overlay, bag highlights + tooltips, equip flash).
           recalcSpentDisplay()
         end)
+      end
+
+      -- Register the checkbox so dependencies can update it live.
+      do
+        local mf = UHCC.mainFrame
+        if mf and cb.checkboxId then
+          mf.UHCC_settingsControls = mf.UHCC_settingsControls or {}
+          mf.UHCC_settingsControls[cb.checkboxId] = cb
+        end
       end
 
       local desc = child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -2782,7 +3137,7 @@ local function buildTabPage(panel, tabName, spec)
       eb:HookScript("OnEditFocusLost", function(self)
         if item.option and item.option.checkboxId then
           ensureCharDB()
-          UHCC_CharDB.options[item.option.checkboxId] = tostring(self:GetText() or "")
+          UHCC_CharDB.settings[item.option.checkboxId] = tostring(self:GetText() or "")
           recalcSpentDisplay()
         end
       end)
@@ -2799,6 +3154,15 @@ local function buildTabPage(panel, tabName, spec)
 
       local descH = desc:GetStringHeight() or 0
       settingsCursorY = settingsCursorY + 26 + 20 + 6 + 6 + math.max(descH, 14) + 18
+
+      -- Register the editbox so validations can focus it, etc.
+      do
+        local mf = UHCC.mainFrame
+        if mf and item.option and item.option.checkboxId then
+          mf.UHCC_settingsControls = mf.UHCC_settingsControls or {}
+          mf.UHCC_settingsControls[item.option.checkboxId] = eb
+        end
+      end
     elseif item.kind == "settings_info" then
       local padX = 16
       local y = -settingsCursorY
@@ -2875,11 +3239,23 @@ local function applyCustomTabLook(tab, selected)
   fs:SetWidth(0)
   fs:SetNonSpaceWrap(false)
   if selected then
-    bg:SetColorTexture(0.42, 0.34, 0.14, 1)
+    if bg.SetTexture then
+      bg:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ActiveTab")
+      -- Flip vertically so the tab looks anchored at the bottom.
+      bg:SetTexCoord(0, 1, 1, 0)
+    else
+      bg:SetColorTexture(0.42, 0.34, 0.14, 1)
+    end
     fs:SetFontObject(GameFontHighlightSmall)
     fs:SetTextColor(1, 1, 0.85, 1)
   else
-    bg:SetColorTexture(0.12, 0.12, 0.12, 0.98)
+    if bg.SetTexture then
+      bg:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-InActiveTab")
+      -- Flip vertically so the tab looks anchored at the bottom.
+      bg:SetTexCoord(0, 1, 1, 0)
+    else
+      bg:SetColorTexture(0.12, 0.12, 0.12, 0.98)
+    end
     fs:SetFontObject(GameFontNormalSmall)
     fs:SetTextColor(0.82, 0.82, 0.82, 1)
   end
@@ -2907,7 +3283,6 @@ local function createMainWindow()
   if UHCC.mainFrame then return UHCC.mainFrame end
 
   ensureCharDB()
-  pruneInvalidGearArmorSelections()
   pruneInvalidWeaponSelections()
 
   local f = CreateFrame("Frame", "UHCC_MainFrame", UIParent, "BasicFrameTemplateWithInset")
@@ -2934,6 +3309,52 @@ local function createMainWindow()
   tinsert(UISpecialFrames, f:GetName())
 
   f.TitleText:SetText(("UltimateHardcoreChallengeUI v%s"):format(getAddonVersion()))
+
+  -- Top-left: round MiniMap-style ring; smaller spell icon centered in the ring opening.
+  -- MiniMap-TrackingBorder is asymmetrical (tracking tab), so icon + bg share a small nudge vs. texture center.
+  do
+    local pf = CreateFrame("Frame", "UHCC_MainFramePortrait", f)
+    pf:SetFrameLevel((f:GetFrameLevel() or 0) + 5)
+    local RING_SZ = 76
+    local ICON_SZ = 32
+    local BG_SZ = 64
+    -- Visually centers content in the circular part of the border (MiniMap ring tab skews the hole).
+    local HOLE_OX, HOLE_OY = -16, 16
+    pf:SetSize(RING_SZ, RING_SZ)
+    -- Whole portrait (ring + icon): nudge vs. frame corner — was (8,-8); 5px left + 5px up → (3,-3)
+    pf:SetPoint("TOPLEFT", f, "TOPLEFT", -18, 18)
+
+    local ring = pf:CreateTexture(nil, "OVERLAY")
+    ring:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    ring:SetSize(RING_SZ, RING_SZ)
+    ring:SetPoint("CENTER", pf, "CENTER", 0, 0)
+
+    local bg = pf:CreateTexture(nil, "BACKGROUND")
+    bg:SetTexture("Interface\\QUESTFRAME\\QuestPortraitBackground")
+    bg:SetSize(BG_SZ, BG_SZ)
+    bg:SetPoint("CENTER", pf, "CENTER", HOLE_OX, HOLE_OY)
+
+    local icon = pf:CreateTexture(nil, "ARTWORK")
+    icon:SetTexture("Interface\\ICONS\\Ability_Warrior_Rampage")
+    icon:SetSize(ICON_SZ, ICON_SZ)
+    icon:SetPoint("CENTER", pf, "CENTER", HOLE_OX, HOLE_OY)
+
+    -- Clip icon (and bg) to a circle — same mask as Blizzard character portraits when supported.
+    do
+      local maskPath = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask"
+      if pf.CreateMaskTexture and icon.AddMaskTexture then
+        local function applyRoundMask(target, sz)
+          local m = pf:CreateMaskTexture()
+          m:SetTexture(maskPath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+          m:SetSize(sz, sz)
+          m:SetPoint("CENTER", target, "CENTER", 0, 0)
+          target:AddMaskTexture(m)
+        end
+        pcall(applyRoundMask, icon, ICON_SZ)
+        pcall(applyRoundMask, bg, BG_SZ)
+      end
+    end
+  end
 
   -- Content inset
   local content = CreateFrame("Frame", nil, f, "InsetFrameTemplate3")
@@ -2966,19 +3387,34 @@ local function createMainWindow()
   local function buildSpecForTab(tabKey)
     if tabKey == "settings" then
       local spec = {}
+      ensureCharDB()
+      local annoyOn = (UHCC_CharDB.settings and UHCC_CharDB.settings["SETTINGS-ANNOY"]) and true or false
       for _, opt in ipairs(UHCC.OPTIONS) do
         if opt.tab == "settings" and opt.inputType == "checkbox" then
-          local annoyOn = uhccAnnoyEnabled()
+          ensureCharDB()
+          local cur = (UHCC_CharDB.settings and UHCC_CharDB.settings[opt.checkboxId]) and true or false
+          local disabled = false
+          local indent = nil
+          -- Money Management depends on Annoy me.
+          if opt.checkboxId == "SETTINGS-ANNOY" then
+            annoyOn = cur
+          elseif opt.checkboxId == "SETTINGS-MONEYMGT" then
+            indent = 18
+            if not annoyOn then
+              cur = false
+              disabled = true
+            end
+          end
           spec[#spec + 1] = {
             kind = "settings_checkbox",
             label = (opt.label or ""),
             description = opt.description or "",
-            opts = { checked = annoyOn, disabled = false },
+            opts = { checked = cur, disabled = disabled, indent = indent },
             option = opt,
           }
         elseif opt.tab == "settings" and opt.inputType == "text" then
           ensureCharDB()
-          local v = UHCC_CharDB.options[opt.checkboxId]
+          local v = (UHCC_CharDB.settings and UHCC_CharDB.settings[opt.checkboxId]) or nil
           if v == nil then v = "" end
           spec[#spec + 1] = {
             kind = "settings_text",
@@ -3002,11 +3438,11 @@ local function createMainWindow()
       spec[#spec + 1] = { kind = "spacer" }
       spec[#spec + 1] = {
         kind = "settings_info",
-        text = "Support: https://github.com/JulioPotier/UltimateHardcoreChallengeUI/issues",
+        text = "Support: |cff66ccffhttps://github.com/JulioPotier/UltimateHardcoreChallengeUI/issues|r",
       }
       spec[#spec + 1] = {
         kind = "settings_info",
-        text = "Tip me golds on |cffff69b4Kirbybank-Soulseeker|r ;)",
+        text = "Tip me golds on |cffff69b4Kirbank-Soulseeker|r ;)",
       }
       return spec
     end
@@ -3017,15 +3453,14 @@ local function createMainWindow()
     local sectionColumns = nil
     if tabKey == "gear_quality" then
       sectionTitles = {
-        gear_type = "Gear",
-        gear_quality = "Quality",
-        gear_slots = "Accessories",
+        equipment_slots_a = "Character slots",
+        gear_quality = "Gear Quality",
         gear_quest = "Quest Gear",
       }
-      sectionColumns = { -- // 0 to 2 max columns
-        gear_type = 0,
-        gear_quality = 1,
-        gear_slots = 2,
+      sectionColumns = {
+        equipment_slots_a = 0,
+        equipment_slots_b = 1,
+        gear_quality = 2,
         gear_quest = 2,
       }
     elseif tabKey == "weapons_services" then
@@ -3068,25 +3503,31 @@ local function createMainWindow()
       if opt.tab == tabKey then
         local skip = false
         -- Faction-specific dungeon display:
-        -- Horde shows Ragefire Chasm; Alliance shows The Stockade (only this difference).
+        -- Horde shows Ragefire Chasm + Wailing Caverns; Alliance shows The Stockade.
         if tabKey == "zones_dungeons" and opt.category == "dungeons" then
           local faction = (UnitFactionGroup and UnitFactionGroup("player")) or nil
           local mid = tonumber(opt.term)
           if faction == "Horde" and mid == 717 then
             skip = true -- hide Stockade for Horde
-          elseif faction == "Alliance" and mid == 2437 then
-            skip = true -- hide Ragefire for Alliance
+          elseif faction == "Alliance" and (mid == 2437 or mid == 718) then
+            skip = true -- hide Ragefire + Wailing Caverns for Alliance
           end
+        end
+        if tabKey == "gear_quality" and (opt.category == "equipment_slots_a" or opt.category == "equipment_slots_b") then
+          if opt.checkboxId == "EQUIP-RELIC" and not uhccPlayerShowsRelicSlotOption() then skip = true end
+          if opt.checkboxId == "EQUIP-RANGE" and not uhccPlayerShowsRangeWeaponSlotOption() then skip = true end
         end
 
         if not skip then
-          if sectionTitles and sectionTitles[opt.category] and lastSection ~= opt.category then
-            if opt.inputType == "checkbox" or opt.inputType == "range" then
+          if lastSection ~= opt.category and (opt.inputType == "checkbox" or opt.inputType == "range") then
+            local col = sectionColumns and sectionColumns[opt.category]
+            local title = sectionTitles and sectionTitles[opt.category]
+            if col ~= nil or (title ~= nil and title ~= "") then
               if #spec > 0 then spec[#spec + 1] = { kind = "spacer" } end
               spec[#spec + 1] = {
                 kind = "section",
-                text = sectionTitles[opt.category],
-                column = sectionColumns and sectionColumns[opt.category] or nil,
+                text = title or "",
+                column = col,
               }
               lastSection = opt.category
             end
@@ -3094,20 +3535,43 @@ local function createMainWindow()
 
           if opt.inputType == "checkbox" then
             local text = opt.label .. formatCostSilver(uhccGetDisplayCostForOption(opt))
-            local armorDenied = isGearArmorTierOption(opt) and not playerCanUseGearArmorTerm(opt.term)
+            local plvl = (UnitLevel and UnitLevel("player")) or 0
+            local reqLvl = tonumber(opt.minPlayerLevel) or 0
+            local lowLvl = ((opt.category == "dungeons") or (opt.category == "battlegrounds")) and reqLvl > 0 and plvl < reqLvl
+            if lowLvl then
+              text = text .. (" - lvl %d"):format(reqLvl)
+            end
             local weaponDenied = isWeaponPurchaseOption(opt) and not playerCanUseWeaponTerm(opt.term)
             local selfFoundDenied = uhccOptionDeniedInSelfFound(opt)
             local chkOpts = nil
             if selfFoundDenied then
               chkOpts = { checked = false, disabled = true }
-            elseif armorDenied then
-              chkOpts = { checked = false, disabled = true }
             elseif weaponDenied then
               chkOpts = { checked = false, disabled = true }
             elseif optionLocksFreeChoice(opt) then
               chkOpts = { checked = true, disabled = true }
-            elseif getCharCheckboxState(opt) then
-              chkOpts = { checked = true }
+            else
+              -- UI check state: in Money Management mode, show draft (if any) instead of purchased.
+              local cur = nil
+              local mf = UHCC.mainFrame
+              if uhccMoneyManagementEnabled() and mf and type(mf.UHCC_draftPurchases) == "table" then
+                cur = mf.UHCC_draftPurchases[opt.checkboxId]
+              else
+                cur = getCharCheckboxState(opt)
+                -- When Money Management is ON but the frame isn't shown yet (no draft),
+                -- reflect pending (due) purchases in the UI so they stay checked after /reload.
+                if (not cur) and uhccMoneyManagementEnabled() then
+                  ensureCharDB()
+                  if UHCC_CharDB.pendingPurchases and UHCC_CharDB.pendingPurchases[opt.checkboxId] then
+                    cur = true
+                  end
+                end
+              end
+              if cur then chkOpts = { checked = true } end
+              if lowLvl then
+                chkOpts = chkOpts or {}
+                chkOpts.disabled = true
+              end
             end
             spec[#spec + 1] = {
               kind = "checkbox",
@@ -3153,17 +3617,20 @@ local function createMainWindow()
 
     local bg = tab:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
+    -- Default textured tab background (overridden by applyCustomTabLook).
+    bg:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-InActiveTab")
+    bg:SetTexCoord(0, 1, 1, 0)
     tab.UHCC_bg = bg
 
+    -- No visible hover highlight (avoid the default larger-looking highlight, and avoid invalid nil arg).
     local hi = tab:CreateTexture(nil, "HIGHLIGHT")
     hi:SetAllPoints()
-    hi:SetColorTexture(1, 1, 1, 0.08)
-    hi:SetBlendMode("ADD")
+    hi:SetColorTexture(1, 1, 1, 0)
 
     tab:SetScript("OnClick", function(self) setTabSelected(self:GetID()) end)
 
     if i == 1 then
-      tab:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -30)
+      tab:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -36)
     else
       tab:SetPoint("LEFT", _G[("UHCC_MainFrameTab%d"):format(i - 1)], "RIGHT", 3, 0)
     end
@@ -3180,9 +3647,18 @@ local function createMainWindow()
 
   -- Spent counter (top-right)
   local spent = CreateFrame("Frame", nil, f)
-  spent:SetPoint("TOPRIGHT", f, "TOPRIGHT", -120, -34)
+  spent:SetPoint("TOPRIGHT", f, "TOPRIGHT", -120, -20)
   spent:SetSize(220, 20)
   f.spentFrame = spent
+  f.UHCC_spentAnchorX = -120
+  f.UHCC_spentAnchorY_mmOn = -20
+  f.UHCC_spentAnchorY_mmOff = -35 -- 15px lower when Money Management is disabled
+  function f:UHCC_UpdateSpentAnchor()
+    if not self.spentFrame then return end
+    local y = uhccMoneyManagementEnabled() and self.UHCC_spentAnchorY_mmOn or self.UHCC_spentAnchorY_mmOff
+    self.spentFrame:ClearAllPoints()
+    self.spentFrame:SetPoint("TOPRIGHT", self, "TOPRIGHT", self.UHCC_spentAnchorX or -120, y or -20)
+  end
 
   local goldIcon, silverIcon = uhccMoneyDisplayTokens()
 
@@ -3204,12 +3680,222 @@ local function createMainWindow()
   end
   recalcSpentDisplay()
 
+  -- Money management UI (debt + cart + purchase button)
+  local debtLabel = spent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  debtLabel:SetPoint("TOPRIGHT", spentLabel, "BOTTOMRIGHT", 0, -2)
+  debtLabel:SetJustifyH("RIGHT")
+  debtLabel:SetText("Due:")
+  local debtValue = spent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  debtValue:SetPoint("LEFT", debtLabel, "RIGHT", 30, 0)
+  debtValue:SetJustifyH("LEFT")
+  debtValue:SetText("00 " .. goldIcon .. " 00 " .. silverIcon)
+  f.debtValueText = debtValue
+
+  local cartLabel = spent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  cartLabel:SetPoint("TOPRIGHT", debtLabel, "BOTTOMRIGHT", 0, -2)
+  cartLabel:SetJustifyH("RIGHT")
+  cartLabel:SetText("Cart:")
+  local cartValue = spent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  cartValue:SetPoint("LEFT", cartLabel, "RIGHT", 30, 0)
+  cartValue:SetJustifyH("LEFT")
+  cartValue:SetText("00 " .. goldIcon .. " 00 " .. silverIcon)
+  f.cartValueText = cartValue
+
+  function f:UHCC_UpdateMoneyUI()
+    ensureCharDB()
+    local mmOn = uhccMoneyManagementEnabled()
+    if self.UHCC_UpdateSpentAnchor then self:UHCC_UpdateSpentAnchor() end
+    local faction = (UnitFactionGroup and UnitFactionGroup("player")) or nil
+    local skullIcon = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_8:14:14:0:0|t"
+    goldIcon, silverIcon = uhccMoneyDisplayTokens()
+    local due = uhccGetMoneyDueCopper()
+    local dg, ds = formatGoldSilverFromCopper(due)
+    debtValue:SetText(("%02d %s %02d %s"):format(dg, goldIcon, ds, silverIcon))
+
+    local availableAfterDebt = (GetMoney and GetMoney() or 0) - due
+    if availableAfterDebt < 0 then availableAfterDebt = 0 end
+
+    local add = 0
+    if mmOn and type(self.UHCC_draftPurchases) == "table" then
+      add = uhccComputeAdditionalCostCopperForDraft(self.UHCC_draftPurchases, uhccCommittedPurchasesView())
+    end
+    local cg, cs = formatGoldSilverFromCopper(add)
+    cartValue:SetText(("%02d %s %02d %s"):format(cg, goldIcon, cs, silverIcon))
+    if self.purchaseBtn then
+      if mmOn then self.purchaseBtn:Show() else self.purchaseBtn:Hide() end
+      self.purchaseBtn:SetEnabled(add > 0 and availableAfterDebt >= add)
+    end
+
+    -- Hide Due/Cart when Money Management is off.
+    if mmOn then
+      debtLabel:Show()
+      debtValue:Show()
+      cartLabel:Show()
+      cartValue:Show()
+    else
+      debtLabel:Hide()
+      debtValue:Hide()
+      cartLabel:Hide()
+      cartValue:Hide()
+    end
+
+    -- While Money Management is ON, disable unaffordable (not-yet-selected) checkboxes live.
+    if type(self.UHCC_purchaseControls) == "table" then
+      local remaining = availableAfterDebt - add
+      if remaining < 0 then remaining = 0 end
+
+      for id, cb in pairs(self.UHCC_purchaseControls) do
+        local opt = id and UHCC_OPTION_BY_ID[id] or nil
+        if cb and cb.IsEnabled and cb.SetEnabled and opt and opt.tab ~= "settings" then
+          local forcedFree = optionLocksFreeChoice(opt)
+          local deniedSF = uhccOptionDeniedInSelfFound(opt)
+          local deniedWeapon = isWeaponPurchaseOption(opt) and (not playerCanUseWeaponTerm(opt.term))
+          local plvl = (UnitLevel and UnitLevel("player")) or 0
+          local reqLvl = tonumber(opt.minPlayerLevel) or 0
+          local lowLvl = ((opt.category == "dungeons") or (opt.category == "battlegrounds")) and reqLvl > 0 and plvl < reqLvl
+
+          local purchased = (UHCC_CharDB.purchases and UHCC_CharDB.purchases[id]) and true or false
+          local pending = (UHCC_CharDB.pendingPurchases and UHCC_CharDB.pendingPurchases[id]) and true or false
+          local cur = (mmOn and type(self.UHCC_draftPurchases) == "table") and self.UHCC_draftPurchases[id] or nil
+          local checked = (cur ~= nil) and (cur and true or false) or purchased or pending
+
+          -- Label text + suffixes (Paid/Pending/In Cart) + dungeon low-level marker.
+          if cb.Text and cb.Text.SetText and opt and opt.label then
+            local baseText = opt.label .. formatCostSilver(uhccGetDisplayCostForOption(opt))
+            if lowLvl then
+              baseText = baseText .. (" - lvl %d"):format(reqLvl)
+            end
+            -- Enemy capital marker (skull) for cities.
+            if opt.category == "kalimdor_cities" or opt.category == "ek_cities" then
+              local lab = uhccNormalizeNameForCompare(opt.label)
+              local enemy = false
+              if faction == "Alliance" then
+                enemy = (lab == "orgrimmar" or lab == "thunder bluff" or lab == "undercity")
+              elseif faction == "Horde" then
+                enemy = (lab == "stormwind city" or lab == "darnassus" or lab == "ironforge")
+              end
+              if enemy then
+                baseText = baseText .. " - " .. skullIcon
+              end
+            end
+            cb.UHCC_baseText = baseText
+            if mmOn and purchased then
+              cb.Text:SetText(baseText .. " - Paid")
+            elseif mmOn and pending then
+              cb.Text:SetText(baseText .. " - Pending")
+            elseif mmOn and cur and (not purchased) and (not pending) then
+              cb.Text:SetText(baseText .. " - In Cart")
+            else
+              cb.Text:SetText(baseText)
+            end
+          end
+
+          local canToggle = true
+          if forcedFree or deniedSF or deniedWeapon then
+            canToggle = false
+          elseif lowLvl then
+            canToggle = false
+          elseif mmOn and purchased then
+            -- Paid purchases are locked while Money Management is enabled.
+            canToggle = false
+          elseif checked then
+            -- Allow unchecking (except paid-lock case above) to reduce cart.
+            canToggle = true
+          elseif mmOn then
+            -- Only allow checking if affordable with remaining.
+            local price = uhccCostToCopper((opt and opt.cost) or 0)
+            if price > remaining then
+              canToggle = false
+            end
+          else
+            -- Money Management off: normal behavior (toggle allowed).
+            canToggle = true
+          end
+
+          cb:SetEnabled(canToggle)
+          if cb.Text and cb.Text.SetTextColor then
+            if canToggle then
+              cb.Text:SetTextColor(1, 1, 1, 1)
+            else
+              cb.Text:SetTextColor(0.7, 0.7, 0.7, 1)
+            end
+          end
+        end
+      end
+    end
+  end
+
+  f:HookScript("OnShow", function(self)
+    ensureCharDB()
+    if uhccMoneyManagementEnabled() then
+      self.UHCC_draftPurchases = {}
+      local base = uhccCommittedPurchasesView()
+      for k, v in pairs(base) do
+        self.UHCC_draftPurchases[k] = v
+      end
+    else
+      self.UHCC_draftPurchases = nil
+    end
+    if self.UHCC_UpdateMoneyUI then self:UHCC_UpdateMoneyUI() end
+  end)
+  f:HookScript("OnHide", function(self)
+    -- Closing discards draft changes.
+    self.UHCC_draftPurchases = nil
+    -- If Money Management is ON, Bank Name must be set. If not, force MM OFF on close.
+    do
+      ensureCharDB()
+      if uhccMoneyManagementEnabled() then
+        local bn = uhccNormalizeNameForCompare(uhccGetBankNameSetting())
+        if bn == "" then
+          UHCC_CharDB.settings["SETTINGS-MONEYMGT"] = false
+          if self.UHCC_settingsControls and self.UHCC_settingsControls["SETTINGS-MONEYMGT"] then
+            local mm = self.UHCC_settingsControls["SETTINGS-MONEYMGT"]
+            if mm and mm.SetChecked then mm:SetChecked(false) end
+          end
+          if self.UHCC_UpdateMoneyUI then self:UHCC_UpdateMoneyUI() end
+          print("|cffffcc00UHCC|r: Money Management was disabled because Bank Name is missing.")
+        end
+      end
+    end
+  end)
+
   -- Close button (bottom-right)
   local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   closeBtn:SetSize(120, 26)
   closeBtn:SetPoint("BOTTOMRIGHT", -14, 14)
   closeBtn:SetText("Close")
   closeBtn:SetScript("OnClick", function() f:Hide() end)
+
+  local purchaseBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  purchaseBtn:SetSize(120, 26)
+  purchaseBtn:SetPoint("BOTTOMLEFT", 14, 14)
+  purchaseBtn:SetText("Purchase")
+  purchaseBtn:Hide()
+  f.purchaseBtn = purchaseBtn
+  purchaseBtn:SetScript("OnClick", function()
+    ensureCharDB()
+    if not uhccMoneyManagementEnabled() then return end
+    if type(f.UHCC_draftPurchases) ~= "table" then return end
+    local committed = uhccCommittedPurchasesView()
+    local add = uhccComputeAdditionalCostCopperForDraft(f.UHCC_draftPurchases, committed)
+    if add <= 0 then return end
+    local available = (GetMoney and GetMoney() or 0) - uhccGetMoneyDueCopper()
+    if available < add then
+      print("|cffffcc00UHCC|r: Not enough available gold (after debt). Pay your debt first.")
+      return
+    end
+    -- Commit draft → pending purchases (not effective until debt is paid).
+    for k, v in pairs(f.UHCC_draftPurchases) do
+      UHCC_CharDB.pendingPurchases[k] = v
+    end
+    uhccSetMoneyDueCopper(uhccGetMoneyDueCopper() + add)
+    -- Reset draft to committed state.
+    f.UHCC_draftPurchases = {}
+    local base = uhccCommittedPurchasesView()
+    for k, v in pairs(base) do f.UHCC_draftPurchases[k] = v end
+    recalcSpentDisplay()
+    if f.UHCC_UpdateMoneyUI then f:UHCC_UpdateMoneyUI() end
+  end)
 
   return f
 end
@@ -3257,16 +3943,11 @@ local function computeAngleFromCursor()
 end
 
 local function applyMinimapIcon(tex)
-  local customPath = "Interface\\AddOns\\UltimateHardcoreChallengeUI\\assets\\UHCC_MinimapIcon.tga"
-  local ok = tex:SetTexture(customPath)
-  if not ok then
-    tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-  end
-end
-
-local function getMinimapIconPath()
-  -- We can't reliably check file existence at runtime; just try custom first then fallback.
-  return "Interface\\AddOns\\UltimateHardcoreChallengeUI\\assets\\UHCC_MinimapIcon.tga", "Interface\\Icons\\INV_Misc_QuestionMark"
+  if not tex or not tex.SetTexture then return end
+  tex:SetTexture("Interface\\Icons\\Ability_Warrior_Rampage")
+  -- Gentle inset LibDBIcon-style (~5%); ring in OVERLAY above ARTWORK trims the corners.
+  tex:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+  tex:SetVertexColor(1, 1, 1, 1)
 end
 
 local function createMinimapButton()
@@ -3278,7 +3959,8 @@ local function createMinimapButton()
   local btn = CreateFrame("Button", "UHCC_MinimapButton", Minimap)
   UHCC.minimapButton = btn
 
-  btn:SetSize(32, 32)
+  -- Same footprint as LibDBIcon-1.0 (Classic Era): aligns icon + TrackingBorder HUD.
+  btn:SetSize(31, 31)
   btn:SetFrameStrata("HIGH")
   btn:SetFrameLevel(Minimap:GetFrameLevel() + 8)
   btn:SetMovable(true)
@@ -3288,43 +3970,32 @@ local function createMinimapButton()
 
   btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
-  local bg = btn:CreateTexture(nil, "BACKGROUND")
-  bg:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-  bg:SetSize(54, 54)
-  bg:SetPoint("CENTER", 10, -10)
-
-  -- Clean look: no pressed texture swap, just a single icon.
-  btn:SetNormalTexture("Interface\\Buttons\\WHITE8X8")
-  local nt = btn:GetNormalTexture()
-  if nt then
-    nt:SetAllPoints(btn)
-    nt:SetVertexColor(1, 1, 1, 0)
-  end
-
-  btn:SetPushedTexture("Interface\\Buttons\\WHITE8X8")
-  local pt = btn:GetPushedTexture()
-  if pt then
-    pt:SetAllPoints(btn)
-    pt:SetVertexColor(1, 1, 1, 0)
-  end
+  -- BACKGROUND → ARTWORK → OVERLAY: dark chip, then spell art, ring on top (hides square edges).
+  local chip = btn:CreateTexture(nil, "BACKGROUND")
+  chip:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+  chip:SetSize(20, 20)
+  chip:SetPoint("TOPLEFT", 7, -5)
 
   local icon = btn:CreateTexture(nil, "ARTWORK")
-  icon:SetSize(20, 20)
-  icon:SetPoint("CENTER", 0, 0)
-  icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-  icon:SetVertexColor(1, 1, 1, 1)
+  icon:SetSize(17, 17)
+  icon:SetPoint("TOPLEFT", 7, -6)
   applyMinimapIcon(icon)
   btn.icon = icon
+
+  local ring = btn:CreateTexture(nil, "OVERLAY")
+  ring:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+  ring:SetSize(53, 53)
+  ring:SetPoint("TOPLEFT", 0, 0)
 
   btn:SetAlpha(1)
 
   btn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:AddLine("UltimateHardcoreChallengeUI", 1, 1, 1)
+    GameTooltip:AddLine("|cffffcc00UltimateHardcoreChallengeUI|r", 1, 1, 1)
     GameTooltip:AddLine("Left-click: Toggle window", 0.9, 0.9, 0.9)
     GameTooltip:AddLine("Drag: Move icon", 0.9, 0.9, 0.9)
-    GameTooltip:AddLine("/uhcc reset — clear this character's options", 0.75, 0.75, 0.75)
-    GameTooltip:Show()
+    GameTooltip:AddLine("Command: /uhcc", 0.75, 0.75, 0.75)
+     GameTooltip:Show()
   end)
   btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
@@ -3413,6 +4084,59 @@ StaticPopupDialogs["UHCC_RELOAD_UI"] = {
   hideOnEscape = true,
 }
 
+StaticPopupDialogs["UHCC_CANCEL_DUE_PURCHASE"] = {
+  text = "|cffffcc00UHCC|r\n\nAre you sure you want to cancel the due purchase of |cffffcc00%s|r?\n\nThis will remove it from your due cart and reduce your debt accordingly.",
+  button1 = YES,
+  button2 = NO,
+  OnShow = function(self)
+    -- Ensure this confirmation stays above the UHCC main window.
+    if self and self.SetFrameStrata then
+      self:SetFrameStrata("FULLSCREEN_DIALOG")
+    end
+    if self and self.SetFrameLevel then
+      self:SetFrameLevel(7000)
+    end
+    if self and self.Raise then
+      self:Raise()
+    end
+  end,
+  OnAccept = function(_, data)
+    ensureCharDB()
+    if type(data) ~= "table" then return end
+    local opt = data.option
+    local cb = data.checkbox
+    local id = opt and opt.checkboxId or (cb and cb.checkboxId) or nil
+    if not id or not UHCC_CharDB.pendingPurchases or not UHCC_CharDB.pendingPurchases[id] then return end
+
+    UHCC_CharDB.pendingPurchases[id] = nil
+    local costCopper = uhccCostToCopper(uhccGetDisplayCostForOption(opt))
+    uhccSetMoneyDueCopper(uhccGetMoneyDueCopper() - costCopper)
+
+    local mf = UHCC.mainFrame
+    if mf then
+      -- Reset draft to committed view (now without this pending item).
+      if uhccMoneyManagementEnabled() then
+        mf.UHCC_draftPurchases = {}
+        local base = uhccCommittedPurchasesView()
+        for k, v in pairs(base) do mf.UHCC_draftPurchases[k] = v end
+      end
+      if cb and cb.SetChecked then cb:SetChecked(false) end
+      if mf.UHCC_UpdateMoneyUI then mf:UHCC_UpdateMoneyUI() end
+    end
+    recalcSpentDisplay()
+  end,
+  OnCancel = function(_, data)
+    -- Restore the checkmark if user cancels.
+    if type(data) == "table" and data.checkbox and data.checkbox.SetChecked then
+      data.checkbox:SetChecked(true)
+    end
+  end,
+  timeout = 0,
+  whileDead = true,
+  interruptCinematic = false,
+  hideOnEscape = true,
+}
+
 local function slashTrim(s)
   return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
 end
@@ -3460,6 +4184,7 @@ events:RegisterEvent("TRADE_CLOSED")
 events:RegisterEvent("SKILL_LINES_CHANGED")
 events:RegisterEvent("MAIL_SHOW")
 events:RegisterEvent("MAIL_CLOSED")
+events:RegisterEvent("MAIL_SEND_SUCCESS")
 events:RegisterEvent("TAXIMAP_OPENED")
 events:RegisterEvent("TAXIMAP_CLOSED")
 events:SetScript("OnEvent", function(self, event, name)
@@ -3494,8 +4219,15 @@ events:SetScript("OnEvent", function(self, event, name)
     C_Timer.After(1.25, uhccScheduleOnboardingIfNeeded)
   elseif event == "PLAYER_LEVEL_UP" then
     uhccApplyLevelLocks()
+    if UHCC and UHCC.mainFrame and UHCC.mainFrame.UHCC_UpdateMoneyUI then
+      UHCC.mainFrame:UHCC_UpdateMoneyUI()
+    end
   elseif event == "BAG_UPDATE_DELAYED" then
-    uhccScheduleBagInventoryViolationRefresh()
+    uhccEnsureBagHighlightHooksInstalled()
+    uhccRefreshAllBagHighlights()
+    -- Some Classic builds don't reliably fire PLAYER_EQUIPMENT_CHANGED for bag slots.
+    -- BAG_UPDATE_DELAYED is a safe fallback to refresh equip violation warnings.
+    uhccUpdateEquipViolationOverlay()
   elseif event == "GET_ITEM_INFO_RECEIVED" then
     uhccEnsureBagHighlightHooksInstalled()
     uhccRefreshAllBagHighlights()
@@ -3504,15 +4236,9 @@ events:SetScript("OnEvent", function(self, event, name)
     uhccUpdateEquipViolationOverlay()
     uhccUpdateBagSlotButtons()
   elseif event == "UNIT_INVENTORY_CHANGED" then
-    if name == nil or name == "" or name == "player" then
+    if name == "player" then
       uhccUpdateEquipViolationOverlay()
       uhccUpdateBagSlotButtons()
-      if C_Timer and C_Timer.After then
-        C_Timer.After(0, function()
-          uhccUpdateBagSlotButtons()
-          uhccUpdateEquipViolationOverlay()
-        end)
-      end
     end
   elseif event == "UNIT_AURA" then
     if name == "player" then
@@ -3578,6 +4304,46 @@ events:SetScript("OnEvent", function(self, event, name)
   elseif event == "MAIL_CLOSED" then
     uhccMailboxOpen = false
     uhccUpdateEquipViolationOverlay()
+  elseif event == "MAIL_SEND_SUCCESS" then
+    -- Money Management payment: if player sends gold to the configured bank character, reduce debt.
+    ensureCharDB()
+    if not uhccMoneyManagementEnabled() then return end
+    local bankName = uhccNormalizeNameForCompare(uhccGetBankNameSetting())
+    if bankName == "" then return end
+
+    local sentRecipient = uhccLastSendMailRecipient
+    if sentRecipient == nil and SendMailNameEditBox and SendMailNameEditBox.GetText then
+      sentRecipient = SendMailNameEditBox:GetText()
+    end
+    local rlow = uhccNormalizeNameForCompare(sentRecipient)
+    if rlow ~= bankName then return end
+
+    local money = tonumber(uhccLastSendMailMoneyCopper) or 0
+    if money <= 0 and GetSendMailMoney then
+      money = tonumber(GetSendMailMoney()) or 0
+    end
+    if money > 0 then
+      local due = uhccGetMoneyDueCopper()
+      uhccSetMoneyDueCopper(due - money)
+      if uhccGetMoneyDueCopper() <= 0 then
+        -- Debt fully paid: activate pending purchases.
+        for k, v in pairs(UHCC_CharDB.pendingPurchases or {}) do
+          UHCC_CharDB.purchases[k] = v
+        end
+        UHCC_CharDB.pendingPurchases = {}
+      end
+      if UHCC.mainFrame and UHCC.mainFrame.UHCC_UpdateMoneyUI then
+        UHCC.mainFrame:UHCC_UpdateMoneyUI()
+      end
+      recalcSpentDisplay()
+    end
+
+    -- If mailbox is still locked, restore the bank recipient immediately to avoid warnings.
+    if uhccAnnoyEnabled() and (not uhccIsPurchasedById("SERVICE-MAIL")) then
+      if SendMailNameEditBox and SendMailNameEditBox.SetText then
+        SendMailNameEditBox:SetText(uhccGetBankNameSetting())
+      end
+    end
   elseif event == "TAXIMAP_OPENED" then
     uhccTaxiMapOpen = true
     uhccUpdateEquipViolationOverlay()

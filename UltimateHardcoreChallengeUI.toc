@@ -2,9 +2,8 @@
 ## Title: UltimateHardcoreChallengeUI
 ## Notes: Ultimate Hardcore Challenge UI
 ## Author: UHCC
-## Version: 0.3.1
+## Version: 0.5.0
 ## SavedVariables: UHCC_DB
 ## SavedVariablesPerCharacter: UHCC_CharDB
 
-Bindings.xml
 UltimateHardcoreChallengeUI.lua
