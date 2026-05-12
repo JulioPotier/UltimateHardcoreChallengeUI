@@ -3,6 +3,47 @@ local ADDON_NAME = ...
 local UHCC = {}
 _G.UHCC = UHCC
 
+-- =========================
+-- External Settings API
+-- =========================
+-- Other addons can inject controls into the Settings tab (intended for the right column).
+UHCC.externalSettingsProviders = UHCC.externalSettingsProviders or {}
+UHCC.externalSettingsProviderOrder = UHCC.externalSettingsProviderOrder or {}
+
+-- Public: register a provider that returns Settings spec items.
+-- providerFn signature:
+--   providerFn() -> { { kind="checkbox"|"text"|"info"|"spacer"|"section"|"button", ... }, ... }
+function UHCC:RegisterSettingsProvider(providerName, providerFn)
+  if type(providerName) ~= "string" or providerName == "" then return end
+  if type(providerFn) ~= "function" then return end
+
+  if not self.externalSettingsProviders[providerName] then
+    self.externalSettingsProviderOrder[#self.externalSettingsProviderOrder + 1] = providerName
+  end
+  self.externalSettingsProviders[providerName] = providerFn
+
+  local f = self.mainFrame
+  if f and f.UHCC_RebuildSettingsTab then
+    pcall(function() f:UHCC_RebuildSettingsTab() end)
+  end
+end
+
+function UHCC:UnregisterSettingsProvider(providerName)
+  if type(providerName) ~= "string" or providerName == "" then return end
+  if not self.externalSettingsProviders[providerName] then return end
+  self.externalSettingsProviders[providerName] = nil
+  for i = #self.externalSettingsProviderOrder, 1, -1 do
+    if self.externalSettingsProviderOrder[i] == providerName then
+      table.remove(self.externalSettingsProviderOrder, i)
+    end
+  end
+
+  local f = self.mainFrame
+  if f and f.UHCC_RebuildSettingsTab then
+    pcall(function() f:UHCC_RebuildSettingsTab() end)
+  end
+end
+
 -- Keybind strings (shown in WoW Key Bindings UI).
 _G.BINDING_HEADER_UHCC = "Ultimate Hardcore Challenge"
 _G.BINDING_NAME_UHCC_TOGGLE_MAINFRAME = "Toggle UHCC window"
@@ -450,7 +491,7 @@ UHCC.OPTIONS = (function()
     {
       checkboxId = "SETTINGS-ANNOY",
       label = "Annoy me",
-      description = "The addon will try to prevent you from doing things you shouldn't by annoying you to the max.",
+      description = "Try to stop you from doing forbidden actions (with extra warnings).",
       cost = 0,
       category = "settings",
       term = "annoy",
@@ -460,7 +501,7 @@ UHCC.OPTIONS = (function()
     {
       checkboxId = "SETTINGS-MONEYMGT",
       label = "Money Management",
-      description = "When enabled, checking options doesn't purchase them immediately. Use the Purchase button to commit. Purchases increase your debt, which reduces your available gold for future purchases until you pay it to your bank character.",
+      description = "Selections are staged until you click Purchase. This creates debt that reduces available gold until you pay your bank character.",
       cost = 0,
       category = "settings",
       term = "money_mgt",
@@ -469,8 +510,8 @@ UHCC.OPTIONS = (function()
     },
     {
       checkboxId = "SETTINGS-BANKNAME",
-      label = "Bank Name (required if Money Management is ON)",
-      description = "Allowed mailbox recipient when Mail is locked (temporarily suppresses the warning if you mail to this name).",
+      label = "Bank Name (required for Money Management)",
+      description = "Allowed mailbox recipient when Mail is locked.",
       cost = 0,
       category = "settings",
       term = "bank_name",
@@ -2814,6 +2855,10 @@ local function buildTabPage(panel, tabName, spec)
   local scroll, child = createScrollContent(panel)
 
   local innerScrollW = MAIN_FRAME_WIDTH - 64
+  -- Settings tab is going to be split into two columns; keep existing controls on the left half.
+  local settingsGutter = 24
+  local settingsLeftW = math.max(260, math.floor((innerScrollW - settingsGutter) / 2))
+  local settingsColX = { 0, settingsLeftW + settingsGutter }
   local colPitch = math.floor((innerScrollW - 16) / 3)
   local colX = { 8, 8 + colPitch, 8 + colPitch * 2 }
   local rowH = 24
@@ -2837,7 +2882,17 @@ local function buildTabPage(panel, tabName, spec)
 
   local line = 0
   local perBlock = maxRows * maxCols
-  local settingsCursorY = 12 -- distance from top of scroll child (downward) for Settings layout
+  -- Settings layout: 2 columns with independent cursors.
+  local settingsCursorY = { 12, 12 } -- distance from top of scroll child (downward)
+  local settingsColumn = 0 -- 0 = left, 1 = right
+
+  local function curSettingsY()
+    return settingsCursorY[settingsColumn + 1] or 12
+  end
+
+  local function bumpSettingsY(delta)
+    settingsCursorY[settingsColumn + 1] = (settingsCursorY[settingsColumn + 1] or 12) + (tonumber(delta) or 0)
+  end
 
   local function setColumnStart(targetCol)
     targetCol = tonumber(targetCol)
@@ -2865,6 +2920,9 @@ local function buildTabPage(panel, tabName, spec)
   for _, item in ipairs(spec) do
     if item.kind == "spacer" then
       line = line + 1
+    elseif item.kind == "settings_column" then
+      local c = tonumber(item.column)
+      if c == 1 then settingsColumn = 1 else settingsColumn = 0 end
     elseif item.kind == "section" then
       if item.column ~= nil then
         setColumnStart(item.column)
@@ -3022,10 +3080,11 @@ local function buildTabPage(panel, tabName, spec)
       line = line + 3
     elseif item.kind == "settings_checkbox" then
       local padX = 16
-      local y = -settingsCursorY
+      local y = -curSettingsY()
       local cb = CreateFrame("CheckButton", nil, child, "UICheckButtonTemplate")
       local indent = (item.opts and tonumber(item.opts.indent)) or 0
-      cb:SetPoint("TOPLEFT", child, "TOPLEFT", padX + indent, y)
+      local baseX = (settingsColX[settingsColumn + 1] or 0) + padX + indent
+      cb:SetPoint("TOPLEFT", child, "TOPLEFT", baseX, y)
       cb.Text:SetText(item.label)
       cb.Text:SetFontObject("GameFontNormalLarge")
       cb.Text:SetTextColor(1, 1, 1, 1)
@@ -3039,12 +3098,26 @@ local function buildTabPage(panel, tabName, spec)
       cb.UHCC_option = item.option
       cb.checkboxId = item.option and item.option.checkboxId or nil
       cb.cost = item.option and item.option.cost or nil
+      cb.UHCC_set = item.set
+      cb.UHCC_onChange = item.onChange
 
       -- Always hook settings checkboxes (they may be enabled/disabled dynamically).
       if cb.checkboxId then
         cb:HookScript("OnClick", function(self)
           ensureCharDB()
-          UHCC_CharDB.settings[self.checkboxId] = self:GetChecked() and true or false
+          local checked = self:GetChecked() and true or false
+
+          -- External controls can override persistence.
+          if type(self.UHCC_set) == "function" then
+            pcall(self.UHCC_set, checked, self)
+          else
+            UHCC_CharDB.settings[self.checkboxId] = checked
+          end
+
+          if type(self.UHCC_onChange) == "function" then
+            pcall(self.UHCC_onChange, checked, self)
+          end
+
           -- Money Management depends on Annoy me.
           if self.checkboxId == "SETTINGS-ANNOY" then
             local mf = UHCC.mainFrame
@@ -3112,32 +3185,45 @@ local function buildTabPage(panel, tabName, spec)
 
       local desc = child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
       desc:SetPoint("TOPLEFT", cb, "BOTTOMLEFT", 28, -8)
-      desc:SetWidth(math.max(200, innerScrollW - 48))
+      desc:SetWidth(math.max(160, settingsLeftW - (baseX + 28) - 12))
       desc:SetJustifyH("LEFT")
       desc:SetNonSpaceWrap(false)
       desc:SetText(item.description or "")
 
       local descH = desc:GetStringHeight() or 0
-      settingsCursorY = settingsCursorY + 26 + 8 + math.max(descH, 14) + 24
+      bumpSettingsY(26 + 8 + math.max(descH, 14) + 24)
     elseif item.kind == "settings_text" then
       local padX = 16
-      local y = -settingsCursorY
+      local y = -curSettingsY()
 
       local label = child:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-      label:SetPoint("TOPLEFT", child, "TOPLEFT", padX, y)
+      local baseX = (settingsColX[settingsColumn + 1] or 0) + padX
+      label:SetPoint("TOPLEFT", child, "TOPLEFT", baseX, y)
       label:SetText(item.label or "")
 
       local eb = CreateFrame("EditBox", nil, child, "InputBoxTemplate")
       eb:SetAutoFocus(false)
-      eb:SetSize(220, 20)
+      local ebW = clamp(settingsLeftW - padX - 12, 160, 260)
+      eb:SetSize(ebW, 20)
       eb:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -6)
       eb:SetText(item.value or "")
       eb:SetCursorPosition(0)
+      eb.UHCC_set = item.set
+      eb.UHCC_onChange = item.onChange
 
       eb:HookScript("OnEditFocusLost", function(self)
         if item.option and item.option.checkboxId then
           ensureCharDB()
-          UHCC_CharDB.settings[item.option.checkboxId] = tostring(self:GetText() or "")
+          local v = tostring(self:GetText() or "")
+          if type(self.UHCC_set) == "function" then
+            pcall(self.UHCC_set, v, self)
+          else
+            UHCC_CharDB.settings[item.option.checkboxId] = v
+          end
+
+          if type(self.UHCC_onChange) == "function" then
+            pcall(self.UHCC_onChange, v, self)
+          end
           recalcSpentDisplay()
         end
       end)
@@ -3147,13 +3233,13 @@ local function buildTabPage(panel, tabName, spec)
 
       local desc = child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
       desc:SetPoint("TOPLEFT", eb, "BOTTOMLEFT", 4, -6)
-      desc:SetWidth(math.max(200, innerScrollW - 48))
+      desc:SetWidth(math.max(160, settingsLeftW - padX - 12))
       desc:SetJustifyH("LEFT")
       desc:SetNonSpaceWrap(false)
       desc:SetText(item.description or "")
 
       local descH = desc:GetStringHeight() or 0
-      settingsCursorY = settingsCursorY + 26 + 20 + 6 + 6 + math.max(descH, 14) + 18
+      bumpSettingsY(26 + 20 + 6 + 6 + math.max(descH, 14) + 18)
 
       -- Register the editbox so validations can focus it, etc.
       do
@@ -3165,27 +3251,31 @@ local function buildTabPage(panel, tabName, spec)
       end
     elseif item.kind == "settings_info" then
       local padX = 16
-      local y = -settingsCursorY
+      local y = -curSettingsY()
       local fs = child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-      fs:SetPoint("TOPLEFT", child, "TOPLEFT", padX, y)
-      fs:SetWidth(math.max(200, innerScrollW - 48))
+      fs:SetPoint("TOPLEFT", child, "TOPLEFT", (settingsColX[settingsColumn + 1] or 0) + padX, y)
+      fs:SetWidth(math.max(160, settingsLeftW - padX - 12))
       fs:SetJustifyH("LEFT")
       fs:SetNonSpaceWrap(false)
       fs:SetText(item.text or "")
       fs:SetTextColor(0.9, 0.9, 0.9, 1)
       local h = fs:GetStringHeight() or 0
-      settingsCursorY = settingsCursorY + math.max(h, 14) + 16
+      bumpSettingsY(math.max(h, 14) + 16)
     elseif item.kind == "settings_button" then
       local padX = 16
-      local y = -settingsCursorY
+      local y = -curSettingsY()
 
       local btn = CreateFrame("Button", nil, child, "UIPanelButtonTemplate")
-      btn:SetPoint("TOPLEFT", child, "TOPLEFT", padX, y)
+      btn:SetPoint("TOPLEFT", child, "TOPLEFT", (settingsColX[settingsColumn + 1] or 0) + padX, y)
       btn:SetSize(140, 22)
       btn:SetText(item.label or "Button")
       btn:SetEnabled(true)
 
       btn:SetScript("OnClick", function()
+        if type(item.onClick) == "function" then
+          pcall(item.onClick, btn)
+          return
+        end
         if item.action == "reset_character" then
           if StaticPopup_Show then
             StaticPopup_Show("UHCC_RESET_CHARACTER")
@@ -3195,12 +3285,12 @@ local function buildTabPage(panel, tabName, spec)
         end
       end)
 
-      settingsCursorY = settingsCursorY + 22 + 18
+      bumpSettingsY(22 + 18)
     end
   end
 
   local gridHeight = math.max(1, math.ceil(line / (maxRows * maxCols)) * (maxRows * rowH + blockGap) + 60)
-  local height = math.max(gridHeight, settingsCursorY + 36)
+  local height = math.max(gridHeight, math.max(settingsCursorY[1] or 0, settingsCursorY[2] or 0) + 36)
   child:SetSize(1, height)
   scroll:SetVerticalScroll(0)
 end
@@ -3425,6 +3515,96 @@ local function createMainWindow()
           }
         end
       end
+
+      -- External providers: right column injection.
+      do
+        local function asKey(k)
+          k = tostring(k or "")
+          if k == "" then return nil end
+          return k
+        end
+
+        local function curBool(key, defaultVal, getter)
+          if type(getter) == "function" then
+            local ok, v = pcall(getter)
+            if ok then return v and true or false end
+          end
+          local v = (UHCC_CharDB.settings and UHCC_CharDB.settings[key])
+          if v == nil then return defaultVal and true or false end
+          return v and true or false
+        end
+
+        local function curText(key, defaultVal, getter)
+          if type(getter) == "function" then
+            local ok, v = pcall(getter)
+            if ok then return tostring(v or "") end
+          end
+          local v = (UHCC_CharDB.settings and UHCC_CharDB.settings[key])
+          if v == nil then v = defaultVal end
+          return tostring(v or "")
+        end
+
+        local anyExternal = false
+        for _, providerName in ipairs(UHCC.externalSettingsProviderOrder or {}) do
+          local fn = UHCC.externalSettingsProviders and UHCC.externalSettingsProviders[providerName] or nil
+          if type(fn) == "function" then
+            local ok, items = pcall(fn)
+            if ok and type(items) == "table" and #items > 0 then
+              if not anyExternal then
+                spec[#spec + 1] = { kind = "settings_column", column = 1 }
+                anyExternal = true
+              end
+              -- Optional provider title.
+              spec[#spec + 1] = { kind = "settings_info", text = ("|cffffcc00%s|r"):format(providerName) }
+              for _, it in ipairs(items) do
+                local k = tostring(it.kind or "")
+                if k == "spacer" then
+                  spec[#spec + 1] = { kind = "settings_info", text = " " }
+                elseif k == "info" then
+                  spec[#spec + 1] = { kind = "settings_info", text = tostring(it.text or "") }
+                elseif k == "checkbox" then
+                  local key = asKey(it.key or it.checkboxId or it.id)
+                  if key then
+                    local cur = curBool(key, it.default, it.get)
+                    spec[#spec + 1] = {
+                      kind = "settings_checkbox",
+                      label = tostring(it.label or key),
+                      description = tostring(it.description or ""),
+                      opts = { checked = cur, disabled = it.disabled and true or false, indent = it.indent },
+                      option = { checkboxId = key, cost = 0, tab = "settings", category = "external_settings" },
+                      set = it.set,
+                      onChange = it.onChange,
+                    }
+                  end
+                elseif k == "text" then
+                  local key = asKey(it.key or it.checkboxId or it.id)
+                  if key then
+                    spec[#spec + 1] = {
+                      kind = "settings_text",
+                      label = tostring(it.label or key),
+                      description = tostring(it.description or ""),
+                      value = curText(key, it.default, it.get),
+                      option = { checkboxId = key, cost = 0, tab = "settings", category = "external_settings" },
+                      set = it.set,
+                      onChange = it.onChange,
+                    }
+                  end
+                elseif k == "button" then
+                  spec[#spec + 1] = {
+                    kind = "settings_button",
+                    label = tostring(it.label or "Button"),
+                    onClick = it.onClick,
+                  }
+                end
+              end
+            end
+          end
+        end
+        if anyExternal then
+          spec[#spec + 1] = { kind = "settings_column", column = 0 }
+        end
+      end
+
       spec[#spec + 1] = {
         kind = "settings_info",
         text = "Tip: A keybinding is available in Options > Keybindings > Other.",
@@ -3601,6 +3781,19 @@ local function createMainWindow()
   local TAB_SPECS = {}
   for _, tabInfo in ipairs(UHCC.TABS) do
     TAB_SPECS[tabInfo.label] = buildSpecForTab(tabInfo.tab)
+  end
+
+  -- Allow runtime rebuild (e.g. external settings providers registered after the frame is created).
+  f.UHCC_buildSpecForTab = buildSpecForTab
+  function f:UHCC_RebuildSettingsTab()
+    if not self.tabPanels or not self.UHCC_buildSpecForTab then return end
+    local settingsTabId2 = #tabNames
+    local panel = self.tabPanels[settingsTabId2]
+    if not panel then return end
+    local spec2 = self.UHCC_buildSpecForTab("settings") or {}
+    buildTabPage(panel, tabNames[settingsTabId2], spec2)
+    -- Ensure the selected tab stays consistent visually.
+    setTabSelected(self.UHCC_selectedTabId or settingsTabId2)
   end
 
   local tabUniformWidth = computeUniformTabWidthForLabels(tabNames)
