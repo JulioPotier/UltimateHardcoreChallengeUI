@@ -2,7 +2,7 @@
 ## Title: UltimateHardcoreChallengeUI
 ## Notes: Ultimate Hardcore Challenge UI
 ## Author: Kirby2112
-## Version: 0.6.0
+## Version: 0.6.1
 ## SavedVariables: UHCC_DB
 ## SavedVariablesPerCharacter: UHCC_CharDB
 
